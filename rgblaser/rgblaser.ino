@@ -49,6 +49,7 @@ lineto(
 	}
 
 	int err = dx - dy;
+	int delay = 800;
 
 	while (1)
 	{
@@ -69,9 +70,11 @@ lineto(
 			stepper_dir(&stepper_y, sy);
 		}
 
-		delayMicroseconds(600);
-
+		delayMicroseconds(delay);
 /*
+		if (delay > 100)
+			delay -= 1;
+
 		Serial.print(err);
 		Serial.print(' ');
 		Serial.print(stepper_x.pos);
@@ -100,13 +103,14 @@ setup(void)
 
 static void demo(void)
 {
-	lineto(16, 16, 0, 0, 0);
+	lineto(32, 48, 0, 0, 0);
 
 for(int i = 0 ; i < 30 ; i++)
 {
-	lineto(48, 16, 10, 0, 0);
-	lineto(48, 48, 0, 10, 0);
-	lineto(16, 16, 0, 0, 10);
+	for (float t = 0 ; t < 2*M_PI ; t+= 2*M_PI/8)
+	{
+		lineto(32 + sin(t)*16, 32 + cos(t)*16, 0, 250, 0);
+	}
 }
 	laser_color(0,0,0);
 }
