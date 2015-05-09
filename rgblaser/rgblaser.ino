@@ -2,11 +2,36 @@
  * RGB Laser projector driver.
  *
  * Drives two unipolar stepper motors and three PWM pulsed lasers.
+ *
+ * X pulse pattern: 0 1 2 3
+ * Y pulse pattern: 4 5 7 6
  */
 
 
 static uint16_t pos_x = 0;
 static uint16_t pos_y = 0;
+
+// Map the stepper phases to the pin outs
+#define STEPPER_X(A1,B1,A2,B2) \
+	( (A1 << 3) | (B1 << 4) | (A2 << 6) | (B2 << 7) )
+
+#define STEPPER_Y(A1,B1,A2,B2) \
+	( (A1 << 2) | (B1 << 3) | (A2 << 7) | (B2 << 4) )
+
+static const uint8_t stepper_x_steps[] = {
+	STEPPER_X(1,0,0,0),
+	STEPPER_X(0,1,0,0),
+	STEPPER_X(0,0,1,0),
+	STEPPER_X(0,0,0,1),
+};
+
+static const uint8_t stepper_y_steps[] = {
+	STEPPER_Y(1,0,0,0),
+	STEPPER_Y(0,1,0,0),
+	STEPPER_Y(0,0,1,0),
+	STEPPER_Y(0,0,0,1),
+};
+
 
 
 static inline void
@@ -14,9 +39,7 @@ stepper_x(
 	uint8_t x
 )
 {
-	// shuffle the bits abcd -> 000ab0cd
-	x = (x & 0x3) << 3 | (x & 0xC) << 4;
-	GPIOC_PDOR = x;
+	GPIOC_PDOR = stepper_x_steps[x];
 }
 
 
@@ -25,9 +48,15 @@ stepper_y(
 	uint8_t y
 )
 {
-	// shuffle the bits: abcd -> 00abc00d
-	y = (y & 0x7) << 2 | (y & 0x8) << 4;
-	GPIOD_PDOR = y;
+	GPIOD_PDOR = stepper_y_steps[y];
+}
+
+
+static inline void
+stepper_off(void)
+{
+	GPIOD_PDOR = 0;
+	GPIOC_PDOR = 0;
 }
 
 
@@ -46,6 +75,8 @@ stepper_setup(void)
 		pinMode(pins[i], OUTPUT);
 		digitalWrite(pins[i], 0);
 	}
+
+	stepper_off();
 }
 
 #define RED_PIN 21
@@ -85,8 +116,6 @@ setup(void)
 	laser_setup();
 
 	stepper_setup();
-	stepper_x(0);
-	stepper_x(1);
 }
 
 
@@ -98,17 +127,16 @@ loop(void)
 	if (Serial.available())
 	{
 		int x = Serial.read();
-		if ('0' <= x && x <= '7')
+		if ('0' <= x && x <= '8')
 		{
 			x = x - '0';
-			if (x < 4)
-				stepper_x(1 << x);
+			if (x < 5)
+				stepper_x(x);
 			else
-				stepper_y(1 << (x-4));
+				stepper_y(x - 5);
 
-			delay(2);
-			stepper_x(0);
-			stepper_y(0);
+			delay(3);
+			stepper_off();
 			return;
 		}
 
