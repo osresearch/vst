@@ -48,11 +48,41 @@ stepper_setup(void)
 	}
 }
 
+#define RED_PIN 21
+#define GREEN_PIN 20
+#define BLUE_PIN 22
+
+
+static void
+laser_color(
+	uint8_t r,
+	uint8_t g,
+	uint8_t b
+)
+{
+	analogWrite(RED_PIN, r);
+	analogWrite(GREEN_PIN, g);
+	analogWrite(BLUE_PIN, b);
+}
+
+
+static void
+laser_setup(void)
+{
+	pinMode(RED_PIN, OUTPUT);
+	pinMode(GREEN_PIN, OUTPUT);
+	pinMode(BLUE_PIN, OUTPUT);
+
+	laser_color(0,0,0);
+}
+
 
 void
 setup(void)
 {
 	Serial.begin(115200);
+
+	laser_setup();
 
 	stepper_setup();
 	stepper_x(0);
@@ -60,28 +90,62 @@ setup(void)
 }
 
 
+static uint8_t bright = 10;
+
 void
 loop(void)
 {
 	if (Serial.available())
 	{
 		int x = Serial.read();
-		if ('0' <= x && x <= '8')
+		if ('0' <= x && x <= '7')
 		{
 			x = x - '0';
-		} else
+			if (x < 4)
+				stepper_x(1 << x);
+			else
+				stepper_y(1 << (x-4));
+
+			delay(2);
+			stepper_x(0);
+			stepper_y(0);
 			return;
+		}
 
-		if (x < 4)
-			stepper_x(1 << x);
-		else
-			stepper_y(1 << (x-4));
-
-		delay(2);
-		stepper_x(0);
-		stepper_y(0);
+		if (x == 'r')
+		{
+			laser_color(bright, 0, 0);
+			return;
+		}
+		if (x == 'g')
+		{
+			laser_color(0, bright, 0);
+			return;
+		}
+		if (x == 'b')
+		{
+			laser_color(0, 0, bright);
+			return;
+		}
+		if (x == ' ')
+		{
+			laser_color(0,0,0);
+			return;
+		} 
+		if (x == '+')
+		{
+			bright++;
+			return;
+		}
+		if (x == '-')
+		{
+			bright--;
+			return;
+		}
 	}
 
+	Serial.print(bright);
+	Serial.print(' ');
 	Serial.print(pos_x);
 	Serial.print(' ');
 	Serial.print(pos_y);
