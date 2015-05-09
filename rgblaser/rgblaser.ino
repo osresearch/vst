@@ -8,34 +8,7 @@
  */
 
 #include "stepper.h"
-
-#define RED_PIN 21
-#define GREEN_PIN 20
-#define BLUE_PIN 22
-
-
-static void
-laser_color(
-	uint8_t r,
-	uint8_t g,
-	uint8_t b
-)
-{
-	analogWrite(RED_PIN, r);
-	analogWrite(GREEN_PIN, g);
-	analogWrite(BLUE_PIN, b);
-}
-
-
-static void
-laser_setup(void)
-{
-	pinMode(RED_PIN, OUTPUT);
-	pinMode(GREEN_PIN, OUTPUT);
-	pinMode(BLUE_PIN, OUTPUT);
-
-	laser_color(0,0,0);
-}
+#include "laser.h"
 
 
 void
