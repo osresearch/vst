@@ -19,16 +19,24 @@ static uint16_t pos_y = 0;
 	( (A1 << 2) | (B1 << 3) | (A2 << 7) | (B2 << 4) )
 
 static const uint8_t stepper_x_steps[] = {
+	STEPPER_X(1,0,0,1),
 	STEPPER_X(1,0,0,0),
+	STEPPER_X(1,1,0,0),
 	STEPPER_X(0,1,0,0),
+	STEPPER_X(0,1,1,0),
 	STEPPER_X(0,0,1,0),
+	STEPPER_X(0,0,1,1),
 	STEPPER_X(0,0,0,1),
 };
 
 static const uint8_t stepper_y_steps[] = {
+	STEPPER_Y(1,0,0,1),
 	STEPPER_Y(1,0,0,0),
+	STEPPER_Y(1,1,0,0),
 	STEPPER_Y(0,1,0,0),
+	STEPPER_Y(0,1,1,0),
 	STEPPER_Y(0,0,1,0),
+	STEPPER_Y(0,0,1,1),
 	STEPPER_Y(0,0,0,1),
 };
 
@@ -39,7 +47,7 @@ stepper_x(
 	uint8_t x
 )
 {
-	GPIOC_PDOR = stepper_x_steps[x];
+	GPIOC_PDOR = stepper_x_steps[x % 8];
 }
 
 
@@ -48,7 +56,7 @@ stepper_y(
 	uint8_t y
 )
 {
-	GPIOD_PDOR = stepper_y_steps[y];
+	GPIOD_PDOR = stepper_y_steps[y % 8];
 }
 
 
@@ -130,7 +138,7 @@ loop(void)
 		if ('0' <= x && x <= '8')
 		{
 			x = x - '0';
-			if (x < 5)
+			if (x < 8)
 				stepper_x(x);
 			else
 				stepper_y(x - 5);
