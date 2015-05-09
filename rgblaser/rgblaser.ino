@@ -12,6 +12,81 @@
 
 
 void
+lineto(
+	int x1,
+	int y1,
+	uint8_t r,
+	uint8_t g,
+	uint8_t b
+)
+{
+	laser_color(r,g,b);
+
+	int x0 = stepper_x.pos;
+	int y0 = stepper_y.pos;
+
+	int dx;
+	int dy;
+	int sx;
+	int sy;
+
+	if (x0 <= x1)
+	{
+		dx = x1 - x0;
+		sx = 1;
+	} else {
+		dx = x0 - x1;
+		sx = -1;
+	}
+
+	if (y0 <= y1)
+	{
+		dy = y1 - y0;
+		sy = 1;
+	} else {
+		dy = y0 - y1;
+		sy = -1;
+	}
+
+	int err = dx - dy;
+
+	while (1)
+	{
+		if (x0 == x1 && y0 == y1)
+			break;
+
+		int e2 = 2 * err;
+		if (e2 > -dy)
+		{
+			err = err - dy;
+			x0 += sx;
+			stepper_dir(&stepper_x, sx);
+		}
+		if (e2 < dx)
+		{
+			err = err + dx;
+			y0 += sy;
+			stepper_dir(&stepper_y, sy);
+		}
+
+		delayMicroseconds(600);
+
+/*
+		Serial.print(err);
+		Serial.print(' ');
+		Serial.print(stepper_x.pos);
+		Serial.print(' ');
+		Serial.print(stepper_y.pos);
+		Serial.println();
+*/
+	}
+
+	stepper_off();
+	//laser_color(0,0,0);
+}
+
+
+void
 setup(void)
 {
 	Serial.begin(115200);
@@ -22,6 +97,19 @@ setup(void)
 }
 
 
+
+static void demo(void)
+{
+	lineto(16, 16, 0, 0, 0);
+
+for(int i = 0 ; i < 30 ; i++)
+{
+	lineto(48, 16, 10, 0, 0);
+	lineto(48, 48, 0, 10, 0);
+	lineto(16, 16, 0, 0, 10);
+}
+	laser_color(0,0,0);
+}
 
 static uint8_t bright = 10;
 
@@ -46,6 +134,12 @@ loop(void)
 		if (x == 'h')
 		{
 			stepper_home();
+			return;
+		}
+
+		if (x == 'B')
+		{
+			demo();
 			return;
 		}
 
