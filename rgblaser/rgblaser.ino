@@ -7,85 +7,7 @@
  * Y pulse pattern: 4 5 7 6
  */
 
-
-static uint16_t pos_x = 0;
-static uint16_t pos_y = 0;
-
-// Map the stepper phases to the pin outs
-#define STEPPER_X(A1,B1,A2,B2) \
-	( (A1 << 3) | (B1 << 4) | (A2 << 6) | (B2 << 7) )
-
-#define STEPPER_Y(A1,B1,A2,B2) \
-	( (A1 << 2) | (B1 << 3) | (A2 << 7) | (B2 << 4) )
-
-static const uint8_t stepper_x_steps[] = {
-	STEPPER_X(1,0,0,1),
-	STEPPER_X(1,0,0,0),
-	STEPPER_X(1,1,0,0),
-	STEPPER_X(0,1,0,0),
-	STEPPER_X(0,1,1,0),
-	STEPPER_X(0,0,1,0),
-	STEPPER_X(0,0,1,1),
-	STEPPER_X(0,0,0,1),
-};
-
-static const uint8_t stepper_y_steps[] = {
-	STEPPER_Y(1,0,0,1),
-	STEPPER_Y(1,0,0,0),
-	STEPPER_Y(1,1,0,0),
-	STEPPER_Y(0,1,0,0),
-	STEPPER_Y(0,1,1,0),
-	STEPPER_Y(0,0,1,0),
-	STEPPER_Y(0,0,1,1),
-	STEPPER_Y(0,0,0,1),
-};
-
-
-
-static inline void
-stepper_x(
-	uint8_t x
-)
-{
-	GPIOC_PDOR = stepper_x_steps[x % 8];
-}
-
-
-static inline void
-stepper_y(
-	uint8_t y
-)
-{
-	GPIOD_PDOR = stepper_y_steps[y % 8];
-}
-
-
-static inline void
-stepper_off(void)
-{
-	GPIOD_PDOR = 0;
-	GPIOC_PDOR = 0;
-}
-
-
-void
-stepper_setup(void)
-{
-	// the pins are mapped oddly, so we have an array of them.
-	// these are contiguous in ports C and D and will be written
-	// with a single instruction
-	static const uint8_t pins[] = {
-		5, 6, 7, 8, 9, 10, 11, 12
-	};
-
-	for(unsigned i = 0 ; i < sizeof(pins)/sizeof(*pins) ; i++)
-	{
-		pinMode(pins[i], OUTPUT);
-		digitalWrite(pins[i], 0);
-	}
-
-	stepper_off();
-}
+#include "stepper.h"
 
 #define RED_PIN 21
 #define GREEN_PIN 20
@@ -127,6 +49,7 @@ setup(void)
 }
 
 
+
 static uint8_t bright = 10;
 
 void
@@ -135,16 +58,21 @@ loop(void)
 	if (Serial.available())
 	{
 		int x = Serial.read();
-		if ('0' <= x && x <= '8')
-		{
-			x = x - '0';
-			if (x < 8)
-				stepper_x(x);
-			else
-				stepper_y(x - 5);
+		if (x == 'a')
+			stepper_dir(&stepper_x, -1);
+		else
+		if (x == 'd')
+			stepper_dir(&stepper_x, +1);
+		else
+		if (x == 's')
+			stepper_dir(&stepper_y, -1);
+		else
+		if (x == 'w')
+			stepper_dir(&stepper_y, +1);
 
-			delay(3);
-			stepper_off();
+		if (x == 'h')
+		{
+			stepper_home();
 			return;
 		}
 
@@ -182,9 +110,10 @@ loop(void)
 
 	Serial.print(bright);
 	Serial.print(' ');
-	Serial.print(pos_x);
+	Serial.print(stepper_x.pos);
 	Serial.print(' ');
-	Serial.print(pos_y);
+	Serial.print(stepper_y.pos);
 	Serial.println();
 	delay(10);
+	stepper_off();
 }
