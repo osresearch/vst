@@ -3,12 +3,18 @@
  *
  * Interrupt driven SPI from a buffer to continuous line drawing.
  */
+#ifdef SLOW_SPI
 #include <SPI.h>
+#else
+#include "spi4teensy3.h"
+#endif
 
 #define SS_X	9
 #define SS_Y	10
 #define SDI	11
 #define SCK	13
+
+#define timING 
 
 void
 setup()
@@ -22,7 +28,12 @@ setup()
 	digitalWrite(SS_X, 1);
 	digitalWrite(SS_Y, 1);
 
+#ifdef SLOW_SPI
 	SPI.begin();
+	SPI.setClockDivider(SPI_CLOCK_DIV2);
+#else
+	spi4teensy3::init(1);
+#endif
 }
 
 
@@ -42,8 +53,13 @@ mpc4921_write(
 
 	value &= 0x0FFF; // mask out just the 12 bits of data
 	value |= 3 << 12; // disable shutdown
+#ifdef SLOW_SPI
 	SPI.transfer((value >> 8) & 0xFF);
 	SPI.transfer((value >> 0) & 0xFF);
+#else
+	uint8_t buf[2] = { value >> 8, value >> 0 };
+	spi4teensy3::send(buf, sizeof(buf));
+#endif
 
 	// de-assert the slave select pin
 	if (channel == 0)
