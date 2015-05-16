@@ -14,7 +14,9 @@
 #define SDI	11
 #define SCK	13
 
-#define timING 
+#define NUM_PTS 628 // M_PI/0.01
+uint16_t x_pts[628];
+uint16_t y_pts[628];
 
 void
 setup()
@@ -32,9 +34,18 @@ setup()
 	SPI.begin();
 	SPI.setClockDivider(SPI_CLOCK_DIV2);
 #else
-	spi4teensy3::init(1);
+	spi4teensy3::init(0);
+	//spi4teensy3::init(1);
 #endif
+
+	for(int i = 0 ; i < NUM_PTS ; i++)
+	{
+		float t = i * 0.01;
+		x_pts[i] = (sin(t) + 1) * 2047;
+		y_pts[i] = (cos(t) + 1) * 2047;
+	}
 }
+
 
 
 static void
@@ -74,10 +85,11 @@ mpc4921_write(
 void
 loop()
 {
-	for(float t = 0 ; t < 2*M_PI ; t += 0.01)
+	for(int i = 0 ; i < NUM_PTS ; i++)
 	{
-		mpc4921_write(0, (sin(t) + 1) * 2047);
-		mpc4921_write(1, (cos(t) + 1) * 2047);
+		mpc4921_write(0, x_pts[i]);
+		mpc4921_write(1, y_pts[i]);
+		//delay(1);
 	}
 }
 
