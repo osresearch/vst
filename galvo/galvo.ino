@@ -105,10 +105,12 @@ goto_y(
 	mpc4921_write(0, y << 1);
 }
 
-void
-lineto_bright(
+
+static inline void
+_lineto(
 	int x1,
-	int y1
+	int y1,
+	const int bright_shift
 )
 {
 	int dx;
@@ -116,8 +118,12 @@ lineto_bright(
 	int sx;
 	int sy;
 
-	int x0 = x_pos;
-	int y0 = y_pos;
+	int x_off = x1 & ((1 << bright_shift) - 1);
+	int y_off = y1 & ((1 << bright_shift) - 1);
+	x1 >>= bright_shift;
+	y1 >>= bright_shift;
+	int x0 = x_pos >> bright_shift;
+	int y0 = y_pos >> bright_shift;
 
 	if (x0 <= x1)
 	{
@@ -149,18 +155,18 @@ lineto_bright(
 		{
 			err = err - dy;
 			x0 += sx;
-			goto_x(x0);
+			goto_x(x_off + (x0 << bright_shift));
 		}
 		if (e2 < dx)
 		{
 			err = err + dx;
 			y0 += sy;
-			goto_y(y0);
+			goto_y(y_off + (y0 << bright_shift));
 		}
 	}
 
-	x_pos = x0;
-	y_pos = y0;
+	x_pos = x0 << bright_shift;
+	y_pos = y0 << bright_shift;
 }
 
 
@@ -170,58 +176,17 @@ lineto(
 	int y1
 )
 {
-	int dx;
-	int dy;
-	int sx;
-	int sy;
+	_lineto(x1, y1, 1);
+}
 
-	x1 >>= 3;
-	y1 >>= 3;
-	int x0 = x_pos >> 3;
-	int y0 = y_pos >> 3;
 
-	if (x0 <= x1)
-	{
-		dx = x1 - x0;
-		sx = 1;
-	} else {
-		dx = x0 - x1;
-		sx = -1;
-	}
-
-	if (y0 <= y1)
-	{
-		dy = y1 - y0;
-		sy = 1;
-	} else {
-		dy = y0 - y1;
-		sy = -1;
-	}
-
-	int err = dx - dy;
-
-	while (1)
-	{
-		if (x0 == x1 && y0 == y1)
-			break;
-
-		int e2 = 2 * err;
-		if (e2 > -dy)
-		{
-			err = err - dy;
-			x0 += sx;
-			goto_x(x0 << 3);
-		}
-		if (e2 < dx)
-		{
-			err = err + dx;
-			y0 += sy;
-			goto_y(y0 << 3);
-		}
-	}
-
-	x_pos = x0 << 3;
-	y_pos = y0 << 3;
+void
+lineto_bright(
+	int x1,
+	int y1
+)
+{
+	_lineto(x1, y1, 0);
 }
 
 
