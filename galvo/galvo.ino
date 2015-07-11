@@ -1,7 +1,14 @@
 /** \file
- * Galvo based driver using the MCP4921 DAC.
+ * Vector display using the MCP4921 DAC.
  *
- * Interrupt driven SPI from a buffer to continuous line drawing.
+ * format of commands is 3-bytes per command.
+ * 2 bits
+ *  00 == number of lines to be sent
+ *  01 == "pen up" move to new X,Y
+ *  10 == normal line to X,Y
+ *  11 == bright line to X,Y
+ * 11 bits of X (or number of lines)
+ * 11 bits of Y
  */
 #ifdef SLOW_SPI
 #include <SPI.h>
@@ -19,6 +26,7 @@
 void
 setup()
 {
+	Serial.begin(9600);
 	pinMode(RED_PIN, OUTPUT);
 	digitalWrite(RED_PIN, 0);
 
@@ -77,6 +85,7 @@ mpc4921_write(
 
 
 
+// x and y position are in 11-bit range
 static uint16_t x_pos;
 static uint16_t y_pos;
 
@@ -85,7 +94,7 @@ goto_x(
 	uint16_t x
 )
 {
-	mpc4921_write(0, x<<2);
+	mpc4921_write(1, x << 1);
 }
 
 static inline void
@@ -93,11 +102,11 @@ goto_y(
 	uint16_t y
 )
 {
-	mpc4921_write(1, y<<2);
+	mpc4921_write(0, y << 1);
 }
 
 void
-lineto(
+lineto_bright(
 	int x1,
 	int y1
 )
@@ -146,12 +155,73 @@ lineto(
 		{
 			err = err + dx;
 			y0 += sy;
-			mpc4921_write(1, y0<<2);
+			goto_y(y0);
 		}
 	}
 
 	x_pos = x0;
 	y_pos = y0;
+}
+
+
+void
+lineto(
+	int x1,
+	int y1
+)
+{
+	int dx;
+	int dy;
+	int sx;
+	int sy;
+
+	x1 >>= 3;
+	y1 >>= 3;
+	int x0 = x_pos >> 3;
+	int y0 = y_pos >> 3;
+
+	if (x0 <= x1)
+	{
+		dx = x1 - x0;
+		sx = 1;
+	} else {
+		dx = x0 - x1;
+		sx = -1;
+	}
+
+	if (y0 <= y1)
+	{
+		dy = y1 - y0;
+		sy = 1;
+	} else {
+		dy = y0 - y1;
+		sy = -1;
+	}
+
+	int err = dx - dy;
+
+	while (1)
+	{
+		if (x0 == x1 && y0 == y1)
+			break;
+
+		int e2 = 2 * err;
+		if (e2 > -dy)
+		{
+			err = err - dy;
+			x0 += sx;
+			goto_x(x0 << 3);
+		}
+		if (e2 < dx)
+		{
+			err = err + dx;
+			y0 += sy;
+			goto_y(y0 << 3);
+		}
+	}
+
+	x_pos = x0 << 3;
+	y_pos = y0 << 3;
 }
 
 
@@ -167,42 +237,125 @@ read_blocking()
 }
 
 
+#define MAX_PTS 1024
+static unsigned rx_points;
+static unsigned num_points;
+static unsigned fb;
+static uint16_t points[2][MAX_PTS][2];
+static unsigned do_resync;
+
+
 static int
-read_point(
-	uint16_t * x_ptr,
-	uint16_t * y_ptr
-)
+read_data()
 {
-	if (!Serial.available())
+	static uint32_t cmd;
+	static unsigned offset;
+
+	int c = Serial.read();
+	if (c < 0)
 		return -1;
 
-	uint16_t x_hi = read_blocking();
-	uint16_t x_lo = read_blocking();
-	uint16_t y_hi = read_blocking();
-	uint16_t y_lo = read_blocking();
+	Serial.print("----- read: ");
+	Serial.println(c);
 
-	uint16_t x = ((x_hi << 8) | x_lo) & 0xFFF;
-	uint16_t y = ((y_hi << 8) | y_lo) & 0xFFF;
-	*x_ptr = x;
-	*y_ptr = y;
+	// if we are resyncing, wait for a non-zero byte
+	if (do_resync)
+	{
+		if (c == 0)
+			return 0;
+		do_resync = 0;
+	}
 
-	// return the top four bits of the x coord for the intensity
-	return x_hi >> 4;
+	cmd = (cmd << 8) | c;
+	offset++;
+
+	if (offset != 3)
+		return 0;
+
+	// we have a new command
+	// check for a resync
+	if (cmd == 0)
+	{
+		do_resync = 1;
+		offset = cmd = 0;
+		return 0;
+	}
+
+	unsigned bright	= (cmd >> 22) & 0x3;
+	unsigned x	= (cmd >> 11) & 0x7FF;
+	unsigned y	= (cmd >> 0) & 0x7FF;
+
+	offset = cmd = 0;
+
+	// bright 0, switch buffers
+	if (bright == 0)
+	{
+		fb = !fb;
+		num_points = rx_points;
+		rx_points = 0;
+
+		Serial.print("*** fb");
+		Serial.print(fb);
+		Serial.print(" ");
+		Serial.println(num_points);
+		return 1;
+	}
+
+	uint16_t * pt = points[!fb][rx_points++];
+	pt[0] = x | (bright << 11);
+	pt[1] = y;
+
+	return 0;
 }
 
 
 void
 loop()
 {
-	while(1)
-	{
-		uint16_t x, y;
-		int intensity = read_point(&x,&y);
-		if (intensity < 0)
-			continue;
+	//Serial.print(fb);
+	//Serial.print(' ');
+	//Serial.print(num_points);
+	//Serial.println();
 
-		if (intensity == 0)
+	read_data();
+
+	for(int n = 0 ; n < num_points ; n++)
+	{
+		if (Serial.available())
 		{
+			for (int j = 0 ; j < 32 ; j++)
+			{
+				int rc = read_data();
+				if (rc < 0)
+					break;
+
+				// buffer switch!
+				if (rc == 1)
+					; //return;
+			}
+		}
+
+		const uint16_t * const pt = points[fb][n];
+		uint16_t x = pt[0];
+		uint16_t y = pt[1];
+		unsigned intensity = (x >> 11) & 0x3;
+		x &= 0x7FF;
+		y &= 0x7FF;
+
+#if 0
+		Serial.print(x);
+		Serial.print(' ');
+		Serial.print(y);
+		Serial.print(' ');
+		Serial.println(intensity);
+#endif
+
+		if (intensity == 1)
+		{
+			digitalWrite(RED_PIN, 0);
+			if (x == x_pos && y == y_pos)
+				continue;
+
 			goto_x(x);
 			goto_y(y);
 			x_pos = x;
@@ -211,8 +364,10 @@ loop()
 		}
 
 		digitalWrite(RED_PIN, 1);
-		lineto(x, y);
-		digitalWrite(RED_PIN, 0);
+		if (intensity == 2)
+			lineto(x, y);
+		else
+			lineto_bright(x, y);
 	}
 }
 
