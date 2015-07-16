@@ -22,13 +22,16 @@
 #define SCK	13
 
 #define RED_PIN	3
+#define DEBUG_PIN	4
 
 void
 setup()
 {
 	Serial.begin(9600);
 	pinMode(RED_PIN, OUTPUT);
+	pinMode(DEBUG_PIN, OUTPUT);
 	digitalWrite(RED_PIN, 0);
+	digitalWrite(DEBUG_PIN, 0);
 
 	pinMode(SS_X, OUTPUT);
 	pinMode(SS_Y, OUTPUT);
@@ -94,7 +97,7 @@ goto_x(
 	uint16_t x
 )
 {
-	mpc4921_write(1, x << 1);
+	mpc4921_write(1, x);
 }
 
 static inline void
@@ -102,7 +105,7 @@ goto_y(
 	uint16_t y
 )
 {
-	mpc4921_write(0, y << 1);
+	mpc4921_write(0, y);
 }
 
 
@@ -176,7 +179,7 @@ lineto(
 	int y1
 )
 {
-	_lineto(x1, y1, 1);
+	_lineto(x1, y1, 2);
 }
 
 
@@ -220,8 +223,8 @@ read_data()
 	if (c < 0)
 		return -1;
 
-	Serial.print("----- read: ");
-	Serial.println(c);
+	//Serial.print("----- read: ");
+	//Serial.println(c);
 
 	// if we are resyncing, wait for a non-zero byte
 	if (do_resync)
@@ -259,10 +262,10 @@ read_data()
 		num_points = rx_points;
 		rx_points = 0;
 
-		Serial.print("*** fb");
-		Serial.print(fb);
-		Serial.print(" ");
-		Serial.println(num_points);
+		//Serial.print("*** fb");
+		//Serial.print(fb);
+		//Serial.print(" ");
+		//Serial.println(num_points);
 		return 1;
 	}
 
@@ -284,11 +287,13 @@ loop()
 
 	read_data();
 
+	digitalWrite(DEBUG_PIN, 1);
+
 	for(int n = 0 ; n < num_points ; n++)
 	{
 		if (Serial.available())
 		{
-			for (int j = 0 ; j < 32 ; j++)
+			for (int j = 0 ; j < 8 ; j++)
 			{
 				int rc = read_data();
 				if (rc < 0)
@@ -296,7 +301,11 @@ loop()
 
 				// buffer switch!
 				if (rc == 1)
-					; //return;
+				{
+					digitalWrite(RED_PIN, 0);
+					n = 0;
+					;return;
+				}
 			}
 		}
 
@@ -304,8 +313,8 @@ loop()
 		uint16_t x = pt[0];
 		uint16_t y = pt[1];
 		unsigned intensity = (x >> 11) & 0x3;
-		x &= 0x7FF;
-		y &= 0x7FF;
+		x = (x & 0x7FF) << 1;
+		y = (y & 0x7FF) << 1;
 
 #if 0
 		Serial.print(x);
@@ -318,11 +327,19 @@ loop()
 		if (intensity == 1)
 		{
 			digitalWrite(RED_PIN, 0);
+
 			if (x == x_pos && y == y_pos)
 				continue;
 
+			int dx = x - x_pos;
+			int dy = y - y_pos;
+			int dist = dx*dx + dy*dy;
+
+			//delayMicroseconds(10);
 			goto_x(x);
 			goto_y(y);
+			//delayMicroseconds(sqrtf(dist) / 400);
+
 			x_pos = x;
 			y_pos = y;
 			continue;
@@ -333,6 +350,8 @@ loop()
 			lineto(x, y);
 		else
 			lineto_bright(x, y);
+
+		digitalWrite(DEBUG_PIN, 0);
 	}
 }
 
