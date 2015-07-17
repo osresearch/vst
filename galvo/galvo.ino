@@ -16,8 +16,7 @@
 #include "spi4teensy3.h"
 #endif
 
-#define SS_X	9
-#define SS_Y	10
+#define SS_PIN	10
 #define SDI	11
 #define SCK	13
 
@@ -33,14 +32,12 @@ setup()
 	digitalWrite(RED_PIN, 0);
 	digitalWrite(DEBUG_PIN, 0);
 
-	pinMode(SS_X, OUTPUT);
-	pinMode(SS_Y, OUTPUT);
+	pinMode(SS_PIN, OUTPUT);
 	pinMode(SDI, OUTPUT);
 	pinMode(SCK, OUTPUT);
 
 	// slave select pins are high
-	digitalWrite(SS_X, 1);
-	digitalWrite(SS_Y, 1);
+	digitalWrite(SS_PIN, 1);
 
 #ifdef SLOW_SPI
 	SPI.begin();
@@ -58,17 +55,17 @@ mpc4921_write(
 	uint16_t value
 )
 {
+	// assert the slave select pin
+	digitalWrite(SS_PIN, 0);
+
 	value &= 0x0FFF; // mask out just the 12 bits of data
 
-	// assert the slave select pin
-	if (channel == 0)
-	{
-		digitalWrite(SS_X, 0);
-	} else {
-		digitalWrite(SS_Y, 0);
-	}
+	// select the output channel, buffered, no gain
+	if (channel == 1)
+		value |= 0x7000;
+	else
+		value |= 0xF000;
 
-	value |= 3 << 12; // disable shutdown
 #ifdef SLOW_SPI
 	SPI.transfer((value >> 8) & 0xFF);
 	SPI.transfer((value >> 0) & 0xFF);
@@ -78,12 +75,7 @@ mpc4921_write(
 #endif
 
 	// de-assert the slave select pin
-	if (channel == 0)
-	{
-		digitalWrite(SS_X, 1);
-	} else {
-		digitalWrite(SS_Y, 1);
-	}
+	digitalWrite(SS_PIN, 1);
 }
 
 
