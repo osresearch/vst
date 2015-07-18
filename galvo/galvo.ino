@@ -10,18 +10,78 @@
  * 11 bits of X (or number of lines)
  * 11 bits of Y
  */
-#ifdef SLOW_SPI
 #include <SPI.h>
-#else
-#include "spi4teensy3.h"
-#endif
+//#include "DmaSpi.h"
+#include "DMAChannel.h"
 
 #define SS_PIN	10
+#define SS2_PIN	9
 #define SDI	11
 #define SCK	13
 
 #define RED_PIN	3
 #define DEBUG_PIN	4
+
+static DMAChannel spi_dma;
+
+static void
+spi_setup()
+{
+	spi_dma.disable();
+	spi_dma.destination((volatile uint16_t&) SPI0_PUSHR);
+	spi_dma.disableOnCompletion();
+	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
+	spi_dma.transferSize(2);
+
+	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+
+	// configure the output for SS0 pin
+	SPI0_PUSHR = (SPI0_PUSHR & ~0x801F0000) | (SPI.setCS(SS_PIN) << 16);
+	CORE_PIN10_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
+
+	// configure the frame size for 16-bit transfers
+	SPI0_CTAR0 |= 0xF << 27;
+}
+
+
+static void
+spi_tx(
+	const uint16_t * const buf,
+	const unsigned len
+)
+{
+	spi_dma.clearComplete();
+	spi_dma.clearError();
+	spi_dma.sourceBuffer(buf, len);
+
+	SPI0_SR = 0xFF0F0000;
+	SPI0_RSER = 0
+		| SPI_RSER_RFDF_RE
+		| SPI_RSER_RFDF_DIRS
+		| SPI_RSER_TFFF_RE
+		| SPI_RSER_TFFF_DIRS;
+
+	// set PUSHR with our output just before we
+	// initiate the transfer.
+	SPI0_PUSHR = (SPI0_PUSHR & ~0x801F0000) | (1 << 16);
+	spi_dma.enable();
+}
+
+
+static int
+spi_tx_complete()
+{
+	if (!spi_dma.complete())
+		return 0;
+
+	spi_dma.clearComplete();
+
+	// we are done!
+	SPI0_RSER = 0;
+	SPI0_SR = 0xFF0F0000;
+	return 1;
+}
+
 
 void
 setup()
@@ -32,19 +92,27 @@ setup()
 	digitalWrite(RED_PIN, 0);
 	digitalWrite(DEBUG_PIN, 0);
 
-	pinMode(SS_PIN, OUTPUT);
+	//pinMode(SS_PIN, OUTPUT);
+	pinMode(SS2_PIN, OUTPUT);
 	pinMode(SDI, OUTPUT);
 	pinMode(SCK, OUTPUT);
 
 	// slave select pins are high
-	digitalWrite(SS_PIN, 1);
+	digitalWrite(SS2_PIN, 1);
+	//digitalWrite(SS_PIN, 1);
 
 #ifdef SLOW_SPI
 	SPI.begin();
 	SPI.setClockDivider(SPI_CLOCK_DIV2);
 #else
-	spi4teensy3::init(0);
-	//spi4teensy3::init(1);
+	//spi4teensy3::init(0);
+	SPI.begin();
+	SPI.setClockDivider(SPI_CLOCK_DIV2);
+
+	//DMASPI0.begin();
+	//DMASPI0.start();
+	spi_setup();
+
 #endif
 }
 
@@ -56,7 +124,7 @@ mpc4921_write(
 )
 {
 	// assert the slave select pin
-	digitalWrite(SS_PIN, 0);
+	digitalWrite(SS2_PIN, 0);
 
 	value &= 0x0FFF; // mask out just the 12 bits of data
 
@@ -70,12 +138,23 @@ mpc4921_write(
 	SPI.transfer((value >> 8) & 0xFF);
 	SPI.transfer((value >> 0) & 0xFF);
 #else
-	uint8_t buf[2] = { value >> 8, value >> 0 };
-	spi4teensy3::send(buf, sizeof(buf));
+	static uint16_t buf[2];
+
+	buf[0] = value;
+	buf[1] = value;
+	//buf[0] = (value >> 8) & 0xFF;
+	//buf[1] = (value >> 0) & 0xFF;
+
+	spi_tx(buf, sizeof(buf)/2);
+
+	while(!spi_tx_complete())
+		;
+
+	//spi4teensy3::send(buf, sizeof(buf));
 #endif
 
 	// de-assert the slave select pin
-	digitalWrite(SS_PIN, 1);
+	digitalWrite(SS2_PIN, 1);
 }
 
 
@@ -171,7 +250,7 @@ lineto(
 	int y1
 )
 {
-	_lineto(x1, y1, 2);
+	_lineto(x1, y1, 1);
 }
 
 
@@ -281,7 +360,7 @@ loop()
 
 	digitalWrite(DEBUG_PIN, 1);
 
-	for(int n = 0 ; n < num_points ; n++)
+	for(unsigned n = 0 ; n < num_points ; n++)
 	{
 		if (Serial.available())
 		{
