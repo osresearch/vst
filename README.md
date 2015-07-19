@@ -1,7 +1,7 @@
 RGB Laser Projector interface
 ====
 
-https://farm9.staticflickr.com/8881/17435762996_6fcf9eeece_z_d.jpg
+![Teensy installed in the RGB laser projector](https://farm9.staticflickr.com/8881/17435762996_6fcf9eeece_z_d.jpg)
 
 More details at https://trmm.net/Lasers
 
