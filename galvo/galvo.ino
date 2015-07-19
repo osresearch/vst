@@ -1,5 +1,8 @@
 /** \file
- * Vector display using the MCP4921 DAC.
+ * Vector display using the MCP4921 DAC on the teensy3.1.
+ *
+ * this uses the DMA hardware to drive the SPI output and
+ * the second chip select pin (6) to enable/disable the beam.
  *
  * format of commands is 3-bytes per command.
  * 2 bits
@@ -11,24 +14,35 @@
  * 11 bits of Y
  */
 #include <SPI.h>
-//#include "DmaSpi.h"
 #include "DMAChannel.h"
 
 #define SS_PIN	10
-#define SS2_PIN	9
+#define SS2_PIN	6
 #define SDI	11
 #define SCK	13
 
 #define RED_PIN	3
 #define DEBUG_PIN	4
 
+#define MAX_PTS 1024
+static unsigned rx_points;
+static unsigned num_points;
+static unsigned fb;
+static uint16_t points[2][MAX_PTS][2];
+static unsigned do_resync;
+
+#define MOVETO		(1<<11)
+#define LINETO		(2<<11)
+#define BRIGHTTO	(3<<11)
+
 
 static DMAChannel spi_dma;
-#define SPI_DMA_MAX 2048
+#define SPI_DMA_MAX 4096
 static uint32_t spi_dma_q[2][SPI_DMA_MAX];
 static unsigned spi_dma_which;
 static unsigned spi_dma_count;
 static unsigned spi_dma_in_progress;
+static unsigned spi_dma_cs; // which pins are we using for IO
 
 
 static int
@@ -38,7 +52,7 @@ spi_dma_tx_append(
 {
 	spi_dma_q[spi_dma_which][spi_dma_count++] = 0
 		| ((uint32_t) value)
-		| (1 << 16) // enable the chip select line
+		| (spi_dma_cs << 16) // enable the chip select line
 		;
 
 	if (spi_dma_count == SPI_DMA_MAX)
@@ -114,7 +128,9 @@ spi_dma_setup()
 	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
 
 	// configure the output on pin 10 for !SS0 from the SPI hardware
+	// and pin 6 for !SS1.
 	CORE_PIN10_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
+	CORE_PIN6_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
 
 	// configure the frame size for 16-bit transfers
 	SPI0_CTAR0 |= 0xF << 27;
@@ -139,14 +155,36 @@ setup()
 	digitalWrite(RED_PIN, 0);
 	digitalWrite(DEBUG_PIN, 0);
 
-	//pinMode(SS_PIN, OUTPUT);
+	pinMode(SS_PIN, OUTPUT);
 	pinMode(SS2_PIN, OUTPUT);
 	pinMode(SDI, OUTPUT);
 	pinMode(SCK, OUTPUT);
 
-	// slave select pins are high
-	digitalWrite(SS2_PIN, 1);
-	//digitalWrite(SS_PIN, 1);
+	// fill in some points so that we don't burn in the beam
+	points[0][0][0] = 0 | MOVETO;
+	points[0][0][1] = 0;
+	points[0][1][0] = 2047 | LINETO;
+	points[0][1][1] = 0;
+	points[0][2][0] = 2047 | LINETO;
+	points[0][2][1] = 2047;
+	points[0][3][0] = 0 | LINETO;
+	points[0][3][1] = 2047;
+	points[0][4][0] = 0 | LINETO;
+	points[0][4][1] = 0;
+	points[0][5][0] = 1024 | BRIGHTTO;
+	points[0][5][1] = 2047;
+	points[0][6][0] = 2047 | BRIGHTTO;
+	points[0][6][1] = 1024;
+	points[0][7][0] = 0 | BRIGHTTO;
+	points[0][7][1] = 0;
+	points[0][8][0] = 2047 | LINETO;
+	points[0][8][1] = 512;
+	points[0][9][0] = 0 | MOVETO;
+	points[0][9][1] = 0;
+	points[0][10][0] = 2047 | LINETO;
+	points[0][10][1] = 256;
+	num_points = 11;
+	
 
 #ifdef SLOW_SPI
 	SPI.begin();
@@ -205,6 +243,7 @@ goto_x(
 	uint16_t x
 )
 {
+	x_pos = x;
 	mpc4921_write(1, x);
 }
 
@@ -213,6 +252,7 @@ goto_y(
 	uint16_t y
 )
 {
+	y_pos = y;
 	mpc4921_write(0, y);
 }
 
@@ -228,6 +268,9 @@ _lineto(
 	int dy;
 	int sx;
 	int sy;
+
+	const int x1_orig = x1;
+	const int y1_orig = y1;
 
 	int x_off = x1 & ((1 << bright_shift) - 1);
 	int y_off = y1 & ((1 << bright_shift) - 1);
@@ -276,15 +319,18 @@ _lineto(
 		}
 	}
 
-	x_pos = x0 << bright_shift;
-	y_pos = y0 << bright_shift;
+	// ensure that we end up exactly where we want
+	goto_x(x1_orig);
+	goto_y(y1_orig);
 
+/*
 	// wait for the previous line to finish
 	while(!spi_dma_tx_complete())
 		;
 
 	// now send this line, which swaps buffers
 	spi_dma_tx();
+*/
 }
 
 
@@ -294,7 +340,7 @@ lineto(
 	int y1
 )
 {
-	_lineto(x1, y1, 1);
+	_lineto(x1, y1, 2);
 }
 
 
@@ -307,6 +353,16 @@ lineto_bright(
 	_lineto(x1, y1, 0);
 }
 
+void
+lineto_off(
+	int x1,
+	int y1
+)
+{
+	spi_dma_cs=3;
+	_lineto(x1, y1, 5);
+	spi_dma_cs=1;
+}
 
 uint8_t
 read_blocking()
@@ -318,14 +374,6 @@ read_blocking()
 			return c;
 	}
 }
-
-
-#define MAX_PTS 1024
-static unsigned rx_points;
-static unsigned num_points;
-static unsigned fb;
-static uint16_t points[2][MAX_PTS][2];
-static unsigned do_resync;
 
 
 static int
@@ -440,27 +488,8 @@ loop()
 #endif
 
 		if (intensity == 1)
-		{
-			digitalWrite(RED_PIN, 0);
-
-			if (x == x_pos && y == y_pos)
-				continue;
-
-			int dx = x - x_pos;
-			int dy = y - y_pos;
-			int dist = dx*dx + dy*dy;
-
-			//delayMicroseconds(10);
-			goto_x(x);
-			goto_y(y);
-			//delayMicroseconds(sqrtf(dist) / 400);
-
-			x_pos = x;
-			y_pos = y;
-			continue;
-		}
-
-		digitalWrite(RED_PIN, 1);
+			lineto_off(x,y);
+		else
 		if (intensity == 2)
 			lineto(x, y);
 		else
