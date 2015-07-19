@@ -22,37 +22,49 @@
 #define RED_PIN	3
 #define DEBUG_PIN	4
 
+
 static DMAChannel spi_dma;
+#define SPI_DMA_MAX 2048
+static uint32_t spi_dma_q[2][SPI_DMA_MAX];
+static unsigned spi_dma_which;
+static unsigned spi_dma_count;
+static unsigned spi_dma_in_progress;
 
-static void
-spi_setup()
+
+static int
+spi_dma_tx_append(
+	uint16_t value
+)
 {
-	spi_dma.disable();
-	spi_dma.destination((volatile uint32_t&) SPI0_PUSHR);
-	spi_dma.disableOnCompletion();
-	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
-	spi_dma.transferSize(4);
+	spi_dma_q[spi_dma_which][spi_dma_count++] = 0
+		| ((uint32_t) value)
+		| (1 << 16) // enable the chip select line
+		;
 
-	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
-
-	// configure the output for SS0 pin
-	//SPI0_PUSHR = (SPI0_PUSHR & ~0x801F0000) | (SPI.setCS(SS_PIN) << 16);
-	CORE_PIN10_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
-
-	// configure the frame size for 16-bit transfers
-	SPI0_CTAR0 |= 0xF << 27;
+	if (spi_dma_count == SPI_DMA_MAX)
+		return 1;
+	return 0;
 }
 
 
 static void
-spi_tx(
-	const uint32_t * const buf,
-	const unsigned len
-)
+spi_dma_tx()
 {
+	if (spi_dma_count == 0)
+		return;
+
+	// add a EOQ to the last entry
+	spi_dma_q[spi_dma_which][spi_dma_count-1] |= (1<<27);
+
 	spi_dma.clearComplete();
 	spi_dma.clearError();
-	spi_dma.sourceBuffer(buf, len);
+	spi_dma.sourceBuffer(
+		spi_dma_q[spi_dma_which],
+		4 * spi_dma_count  // in bytes, not thingies
+	);
+
+	spi_dma_which = !spi_dma_which;
+	spi_dma_count = 0;
 
 	SPI0_SR = 0xFF0F0000;
 	SPI0_RSER = 0
@@ -62,22 +74,60 @@ spi_tx(
 		| SPI_RSER_TFFF_DIRS;
 
 	spi_dma.enable();
+	spi_dma_in_progress = 1;
 }
 
 
 static int
-spi_tx_complete()
+spi_dma_tx_complete()
 {
+	// if nothing is in progress, we're "complete"
+	if (!spi_dma_in_progress)
+		return 1;
+
 	if (!spi_dma.complete())
 		return 0;
 
 	spi_dma.clearComplete();
+	spi_dma.clearError();
+
+	// the DMA hardware lies; it is not actually complete
+	delayMicroseconds(10);
 
 	// we are done!
 	SPI0_RSER = 0;
 	SPI0_SR = 0xFF0F0000;
+	spi_dma_in_progress = 0;
 	return 1;
 }
+
+
+static void
+spi_dma_setup()
+{
+	spi_dma.disable();
+	spi_dma.destination((volatile uint32_t&) SPI0_PUSHR);
+	spi_dma.disableOnCompletion();
+	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
+	spi_dma.transferSize(4); // write all 32-bits of PUSHR
+
+	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+
+	// configure the output on pin 10 for !SS0 from the SPI hardware
+	CORE_PIN10_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
+
+	// configure the frame size for 16-bit transfers
+	SPI0_CTAR0 |= 0xF << 27;
+
+	// send something to get it started
+	spi_dma_which = 0;
+	spi_dma_count = 0;
+
+	spi_dma_tx_append(0);
+	spi_dma_tx_append(0);
+	spi_dma_tx();
+}
+
 
 
 void
@@ -108,22 +158,8 @@ setup()
 
 	//DMASPI0.begin();
 	//DMASPI0.start();
-	spi_setup();
-
+	spi_dma_setup();
 #endif
-}
-
-
-static inline uint32_t
-spi_data(
-	uint16_t value
-)
-{
-	// enable the chip select line
-	return 0
-		| ((uint32_t) value)
-		| (1 << 16)
-		;
 }
 
 
@@ -145,26 +181,15 @@ mpc4921_write(
 	SPI.transfer((value >> 8) & 0xFF);
 	SPI.transfer((value >> 0) & 0xFF);
 #else
-	static uint32_t buf[3];
+	if (spi_dma_tx_append(value) == 0)
+		return;
 
-	buf[0] = spi_data(value);
-	buf[1] = spi_data(value);
-	buf[2] = spi_data(value) | (1 << 27); // eoq
-
-	//buf[0] = (value >> 8) & 0xFF;
-	//buf[1] = (value >> 0) & 0xFF;
-
-	// assert the slave select pin
-	digitalWrite(SS2_PIN, 0);
-
-	spi_tx(buf, sizeof(buf));
-
-	while(!spi_tx_complete())
+	// wait for the previous line to finish
+	while(!spi_dma_tx_complete())
 		;
 
-	// de-assert the slave select pin
-	digitalWrite(SS2_PIN, 1);
-	//spi4teensy3::send(buf, sizeof(buf));
+	// now send this line, which swaps buffers
+	spi_dma_tx();
 #endif
 }
 
@@ -253,6 +278,13 @@ _lineto(
 
 	x_pos = x0 << bright_shift;
 	y_pos = y0 << bright_shift;
+
+	// wait for the previous line to finish
+	while(!spi_dma_tx_complete())
+		;
+
+	// now send this line, which swaps buffers
+	spi_dma_tx();
 }
 
 
