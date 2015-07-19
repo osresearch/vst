@@ -28,15 +28,15 @@ static void
 spi_setup()
 {
 	spi_dma.disable();
-	spi_dma.destination((volatile uint16_t&) SPI0_PUSHR);
+	spi_dma.destination((volatile uint32_t&) SPI0_PUSHR);
 	spi_dma.disableOnCompletion();
 	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
-	spi_dma.transferSize(2);
+	spi_dma.transferSize(4);
 
 	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
 
 	// configure the output for SS0 pin
-	SPI0_PUSHR = (SPI0_PUSHR & ~0x801F0000) | (SPI.setCS(SS_PIN) << 16);
+	//SPI0_PUSHR = (SPI0_PUSHR & ~0x801F0000) | (SPI.setCS(SS_PIN) << 16);
 	CORE_PIN10_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
 
 	// configure the frame size for 16-bit transfers
@@ -46,7 +46,7 @@ spi_setup()
 
 static void
 spi_tx(
-	const uint16_t * const buf,
+	const uint32_t * const buf,
 	const unsigned len
 )
 {
@@ -61,9 +61,6 @@ spi_tx(
 		| SPI_RSER_TFFF_RE
 		| SPI_RSER_TFFF_DIRS;
 
-	// set PUSHR with our output just before we
-	// initiate the transfer.
-	SPI0_PUSHR = (SPI0_PUSHR & ~0x801F0000) | (1 << 16);
 	spi_dma.enable();
 }
 
@@ -117,15 +114,25 @@ setup()
 }
 
 
+static inline uint32_t
+spi_data(
+	uint16_t value
+)
+{
+	// enable the chip select line
+	return 0
+		| ((uint32_t) value)
+		| (1 << 16)
+		;
+}
+
+
 static void
 mpc4921_write(
 	int channel,
 	uint16_t value
 )
 {
-	// assert the slave select pin
-	digitalWrite(SS2_PIN, 0);
-
 	value &= 0x0FFF; // mask out just the 12 bits of data
 
 	// select the output channel, buffered, no gain
@@ -138,24 +145,29 @@ mpc4921_write(
 	SPI.transfer((value >> 8) & 0xFF);
 	SPI.transfer((value >> 0) & 0xFF);
 #else
-	static uint16_t buf[2];
+	static uint32_t buf[3];
 
-	buf[0] = value;
-	buf[1] = value;
+	buf[0] = spi_data(value);
+	buf[1] = spi_data(value);
+	buf[2] = spi_data(value) | (1 << 27); // eoq
+
 	//buf[0] = (value >> 8) & 0xFF;
 	//buf[1] = (value >> 0) & 0xFF;
 
-	spi_tx(buf, sizeof(buf)/2);
+	// assert the slave select pin
+	digitalWrite(SS2_PIN, 0);
+
+	spi_tx(buf, sizeof(buf));
 
 	while(!spi_tx_complete())
 		;
 
-	//spi4teensy3::send(buf, sizeof(buf));
-#endif
-
 	// de-assert the slave select pin
 	digitalWrite(SS2_PIN, 1);
+	//spi4teensy3::send(buf, sizeof(buf));
+#endif
 }
+
 
 
 
