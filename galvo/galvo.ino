@@ -22,7 +22,8 @@
 #define SCK	13
 
 #define RED_PIN	3
-#define DEBUG_PIN	4
+#define DEBUG_PIN	8
+#define DELAY_PIN	9
 
 #define MAX_PTS 1024
 static unsigned rx_points;
@@ -95,18 +96,30 @@ spi_dma_tx()
 static int
 spi_dma_tx_complete()
 {
+	cli();
+
 	// if nothing is in progress, we're "complete"
 	if (!spi_dma_in_progress)
+	{
+		sei();
 		return 1;
+	}
 
 	if (!spi_dma.complete())
+	{
+		sei();
 		return 0;
+	}
+
+	digitalWriteFast(DELAY_PIN, 1);
 
 	spi_dma.clearComplete();
 	spi_dma.clearError();
 
 	// the DMA hardware lies; it is not actually complete
-	delayMicroseconds(10);
+	delayMicroseconds(5);
+	digitalWriteFast(DELAY_PIN, 0);
+	sei();
 
 	// we are done!
 	SPI0_RSER = 0;
@@ -152,6 +165,7 @@ setup()
 	Serial.begin(9600);
 	pinMode(RED_PIN, OUTPUT);
 	pinMode(DEBUG_PIN, OUTPUT);
+	pinMode(DELAY_PIN, OUTPUT);
 	digitalWrite(RED_PIN, 0);
 	digitalWrite(DEBUG_PIN, 0);
 
@@ -210,10 +224,7 @@ mpc4921_write(
 	value &= 0x0FFF; // mask out just the 12 bits of data
 
 	// select the output channel, buffered, no gain
-	if (channel == 1)
-		value |= 0x7000;
-	else
-		value |= 0xF000;
+	value |= 0x7000 | (channel == 1 ? 0x8000 : 0x0000);
 
 #ifdef SLOW_SPI
 	SPI.transfer((value >> 8) & 0xFF);
