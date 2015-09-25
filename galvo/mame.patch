@@ -1,0 +1,237 @@
+diff --git a/src/emu/video/vector.c b/src/emu/video/vector.c
+index 8fc32f3..a81da04 100644
+--- a/src/emu/video/vector.c
++++ b/src/emu/video/vector.c
+@@ -36,6 +36,13 @@
+ #include "vector.h"
+ 
+ 
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <termios.h>
++
++
+ 
+ #define VECTOR_WIDTH_DENOM          512
+ 
+@@ -146,8 +153,44 @@ float vector_device::m_beam_width = 0.0f;
+ int vector_device::m_flicker;
+ int vector_device::m_vector_index;
+ 
++#include <stdint.h>
++#include <errno.h>
++static int vector_fd;
++
++
++int
++serial_open(
++        const char * const dev
++)
++{
++        const int fd = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY, 0666);
++        if (fd < 0)
++                return -1;
++
++        // Disable modem control signals
++        struct termios attr;
++        tcgetattr(fd, &attr);
++        attr.c_cflag |= CLOCAL | CREAD;
++        attr.c_oflag &= ~OPOST;
++        tcsetattr(fd, TCSANOW, &attr);
++
++        return fd;
++}
++
++
+ void vector_device::device_start()
+ {
++	const char * file = getenv("LASER_SERIAL");
++
++	if (file == NULL)
++		file = "/dev/ttyACM0";
++	vector_fd = serial_open(file);
++	fprintf(stderr, "%s: fd=%d\n", file, vector_fd);
++	if (vector_fd < 0)
++	{
++		perror("acm1");
++	}
++
+ 	m_beam_width = machine().options().beam();
+ 
+ 	/* Grab the settings for this session */
+@@ -181,6 +224,51 @@ float vector_device::get_beam()
+ }
+ 
+ 
++static uint8_t vector_buf[4096];
++static size_t vector_offset;
++static float vector_x_scale;
++static float vector_y_scale;
++static int vector_x_off;
++static int vector_y_off;
++
++
++static void
++goto_xy(
++	int x0,
++	int y0,
++	int intensity
++)
++{
++	if (vector_fd < 0)
++		return;
++
++	int x = (x0 - vector_x_off) * vector_x_scale * .8 + (2048*.1);
++	int y = (y0 - vector_y_off) * vector_y_scale * .8 + (2048*.1);
++	if (x < 0) x = 0;
++	if (y < 0) y = 0;
++	if (x > 2047) x = 2047;
++	if (y > 2047) y = 2047;
++
++	//printf("%d,%d,%d,%d,%d\n", x0, y0, x, y, intensity);
++	y = 2047 - y;
++	x = 2047 - x;
++	uint32_t cmd = (y << 11) | (x << 0);
++
++	if (intensity == 0)
++		cmd |= (1 << 22);
++	else
++	if (intensity < 128)
++		cmd |= (2 << 22);
++	else
++		cmd |= (3 << 22);
++
++	vector_buf[vector_offset++] = (cmd >> 16) & 0xFf;
++	vector_buf[vector_offset++] = (cmd >>  8) & 0xFf;
++	vector_buf[vector_offset++] = (cmd >>  0) & 0xFf;
++}
++
++
++
+ /*
+  * Adds a line end point to the vertices list. The vector processor emulation
+  * needs to call this.
+@@ -192,6 +280,29 @@ void vector_device::add_point (int x, int y, rgb_t color, int intensity)
+ 	if (intensity > 0xff)
+ 		intensity = 0xff;
+ 
++#if 0
++	int v_x = x / 3e5;
++	int v_y = y / 3e5;
++	if (v_x < 0) v_x = 0;
++	if (v_y < 0) v_y = 0;
++	if (v_x > 255) v_x = 255;
++	if (v_y > 255) v_y = 255;
++	v_y = 255 - v_y;
++
++	if (intensity != 0)
++	{
++		vectors[vector_count*4+2+0] = old_v_x;
++		vectors[vector_count*4+2+1] = old_v_y;
++		vectors[vector_count*4+2+2] = v_x;
++		vectors[vector_count*4+2+3] = v_y;
++		vector_count++;
++	}
++
++	old_v_x = v_x;
++	old_v_y = v_y;
++#endif
++	goto_xy(x, y, intensity);
++
+ 	if (m_flicker && (intensity > 0))
+ 	{
+ 		intensity += (intensity * (0x80-(machine().rand()&0xff)) * m_flicker)>>16;
+@@ -222,6 +333,8 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
+ {
+ 	point *newpoint;
+ 
++	//printf("----- clip %d,%d %d,%d\n", x1, yy1, x2, y2);
++
+ 	newpoint = &m_vector_list[m_vector_index];
+ 	newpoint->x = x1;
+ 	newpoint->y = yy1;
+@@ -245,6 +358,63 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
+ void vector_device::clear_list (void)
+ {
+ 	m_vector_index = 0;
++
++	//printf("-------\n");
++
++	vector_buf[vector_offset++] = 1;
++	vector_buf[vector_offset++] = 1;
++	vector_buf[vector_offset++] = 1;
++
++	const size_t len = vector_offset;
++	vector_offset = 0;
++
++	size_t offset = 0;
++
++	while (offset < len)
++	{
++		//fprintf(stderr, "%zu: %zu/%zu\n", vector_count, offset, vec_len);
++		ssize_t rc = write(vector_fd, vector_buf + offset, len - offset);
++		if (rc <= 0)
++		{
++			fprintf(stderr, "fd=%d\n", vector_fd);
++			perror("acm1");
++			if (errno == EAGAIN)
++				continue;
++			close(vector_fd);
++			vector_fd = -1;
++			break;
++		}
++
++		offset += rc;
++	}
++
++#if 0
++	if (vector_fd >= 0 && vector_count != 0)
++	{
++		vectors[0] = (vector_count >> 8) & 0xFF;
++		vectors[1] = (vector_count >> 0) & 0xFF;
++		
++		size_t offset = 0;
++		const size_t vec_len = 2 + vector_count*4;
++		while (offset < vec_len)
++		{
++			fprintf(stderr, "%zu: %zu/%zu\n", vector_count, offset, vec_len);
++			ssize_t rc = write(vector_fd, vectors + offset, vec_len - offset);
++			if (rc <= 0)
++			{
++				fprintf(stderr, "fd=%d\n", vector_fd);
++				perror("acm1");
++				close(vector_fd);
++				vector_fd = -1;
++				break;
++			}
++
++			offset += rc;
++		}
++	}
++
++	vector_count = 0;
++#endif
+ }
+ 
+ 
+@@ -256,11 +426,18 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+ 	float yscale = 1.0f / (65536 * visarea.height());
+ 	float xoffs = (float)visarea.min_x;
+ 	float yoffs = (float)visarea.min_y;
++	vector_x_scale = xscale * 2048;
++	vector_y_scale = yscale * 2048;
++	vector_x_off = xoffs;
++	vector_y_off = yoffs;
++
+ 	point *curpoint;
+ 	render_bounds clip;
+ 	int lastx = 0, lasty = 0;
+ 	int i;
+ 
++//printf("@@@@@@ visaerea %d,%d %f,%f\n", vector_x_off, vector_y_off, 1.0 / vector_x_scale, 1.0 / vector_y_scale);
++
+ 	curpoint = m_vector_list;
+ 
+ 	screen.container().empty();
