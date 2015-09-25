@@ -28,8 +28,7 @@
 #define MAX_PTS 1024
 static unsigned rx_points;
 static unsigned num_points;
-static unsigned fb;
-static uint16_t points[2][MAX_PTS][2];
+static uint16_t points[MAX_PTS][2];
 static unsigned do_resync;
 
 #define MOVETO		(1<<11)
@@ -38,7 +37,7 @@ static unsigned do_resync;
 
 
 static DMAChannel spi_dma;
-#define SPI_DMA_MAX 4096
+#define SPI_DMA_MAX 1024
 static uint32_t spi_dma_q[2][SPI_DMA_MAX];
 static unsigned spi_dma_which;
 static unsigned spi_dma_count;
@@ -96,30 +95,27 @@ spi_dma_tx()
 static int
 spi_dma_tx_complete()
 {
-	cli();
+	//cli();
 
 	// if nothing is in progress, we're "complete"
 	if (!spi_dma_in_progress)
 	{
-		sei();
+		//sei();
 		return 1;
 	}
 
 	if (!spi_dma.complete())
 	{
-		sei();
+		//sei();
 		return 0;
 	}
-
-	digitalWriteFast(DELAY_PIN, 1);
 
 	spi_dma.clearComplete();
 	spi_dma.clearError();
 
 	// the DMA hardware lies; it is not actually complete
 	delayMicroseconds(5);
-	digitalWriteFast(DELAY_PIN, 0);
-	sei();
+	//sei();
 
 	// we are done!
 	SPI0_RSER = 0;
@@ -174,6 +170,7 @@ setup()
 	pinMode(SDI, OUTPUT);
 	pinMode(SCK, OUTPUT);
 
+#if 0
 	// fill in some points so that we don't burn in the beam
 	points[0][0][0] = 0 | MOVETO;
 	points[0][0][1] = 0;
@@ -198,6 +195,7 @@ setup()
 	points[0][10][0] = 2047 | LINETO;
 	points[0][10][1] = 256;
 	num_points = 11;
+#endif
 	
 
 #ifdef SLOW_SPI
@@ -397,6 +395,7 @@ read_data()
 	if (c < 0)
 		return -1;
 
+	digitalWriteFast(DELAY_PIN, 1);
 	//Serial.print("----- read: ");
 	//Serial.println(c);
 
@@ -432,7 +431,6 @@ read_data()
 	// bright 0, switch buffers
 	if (bright == 0)
 	{
-		fb = !fb;
 		num_points = rx_points;
 		rx_points = 0;
 
@@ -443,7 +441,7 @@ read_data()
 		return 1;
 	}
 
-	uint16_t * pt = points[!fb][rx_points++];
+	uint16_t * pt = points[rx_points++];
 	pt[0] = x | (bright << 11);
 	pt[1] = y;
 
@@ -459,44 +457,40 @@ loop()
 	//Serial.print(num_points);
 	//Serial.println();
 
-	read_data();
+	static uint32_t frame_micros;
+	uint32_t now;
 
-	digitalWrite(DEBUG_PIN, 1);
+	while(1)
+	{
+		now = micros();
+
+		// make sure we flush the partial buffer
+		// once the last one has completed
+#if 0
+		if (spi_dma_tx_complete())
+		{
+			if (rx_points == 0 && now - frame_micros > 20000u)
+				break;
+			spi_dma_tx();
+		}
+#endif
+
+		// start redraw when read_data is done
+		if (Serial.available() && read_data() == 1)
+			break;
+	}
+
+	frame_micros = now;
+	digitalWriteFast(DELAY_PIN, 0);
 
 	for(unsigned n = 0 ; n < num_points ; n++)
 	{
-		if (Serial.available())
-		{
-			for (int j = 0 ; j < 8 ; j++)
-			{
-				int rc = read_data();
-				if (rc < 0)
-					break;
-
-				// buffer switch!
-				if (rc == 1)
-				{
-					digitalWrite(RED_PIN, 0);
-					n = 0;
-					;return;
-				}
-			}
-		}
-
-		const uint16_t * const pt = points[fb][n];
+		const uint16_t * const pt = points[n];
 		uint16_t x = pt[0];
 		uint16_t y = pt[1];
 		unsigned intensity = (x >> 11) & 0x3;
 		x = (x & 0x7FF) << 1;
 		y = (y & 0x7FF) << 1;
-
-#if 0
-		Serial.print(x);
-		Serial.print(' ');
-		Serial.print(y);
-		Serial.print(' ');
-		Serial.println(intensity);
-#endif
 
 		if (intensity == 1)
 			lineto_off(x,y);
@@ -505,8 +499,15 @@ loop()
 			lineto(x, y);
 		else
 			lineto_bright(x, y);
-
-		digitalWrite(DEBUG_PIN, 0);
 	}
+
+	digitalWriteFast(DELAY_PIN, 1);
+	goto_x(0);
+	goto_y(0);
+
+	while(!spi_dma_tx_complete())
+		;
+	spi_dma_tx();
+	digitalWriteFast(DELAY_PIN, 0);
 }
 
