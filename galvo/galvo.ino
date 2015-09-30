@@ -12,6 +12,9 @@
  *  11 == bright line to X,Y
  * 11 bits of X (or number of lines)
  * 11 bits of Y
+ *
+ * the Z axis on the vectrex needs to swing 0 to 5V, so it uses
+ * an NPN transistor to switch it totally off.
  */
 #include <SPI.h>
 #include "DMAChannel.h"
@@ -21,11 +24,10 @@
 #define SDI	11
 #define SCK	13
 
-#define RED_PIN	3
 #define DEBUG_PIN	8
-#define DELAY_PIN	9
+#define DELAY_PIN	7
 
-#define MAX_PTS 1024
+#define MAX_PTS 2048
 static unsigned rx_points;
 static unsigned num_points;
 static uint16_t points[MAX_PTS][2];
@@ -35,14 +37,24 @@ static unsigned do_resync;
 #define LINETO		(2<<11)
 #define BRIGHTTO	(3<<11)
 
+#define BRIGHT_SHIFT	2 // larger numbers == dimmer lines
+#define NORMAL_SHIFT	2
+#define OFF_SHIFT	5
+#define OFF_DWELL0	4 // time to sit beam on before starting a transit
+#define OFF_DWELL1	0 // time to sit before starting a transit
+#define OFF_DWELL2	6 // time to sit after finishing a transit
+
 
 static DMAChannel spi_dma;
-#define SPI_DMA_MAX 1024
+#define SPI_DMA_MAX 4096
 static uint32_t spi_dma_q[2][SPI_DMA_MAX];
 static unsigned spi_dma_which;
 static unsigned spi_dma_count;
 static unsigned spi_dma_in_progress;
 static unsigned spi_dma_cs; // which pins are we using for IO
+
+#define SPI_DMA_CS_BEAM_ON 3
+#define SPI_DMA_CS_BEAM_OFF 1
 
 
 static int
@@ -144,7 +156,10 @@ spi_dma_setup()
 	// configure the frame size for 16-bit transfers
 	SPI0_CTAR0 |= 0xF << 27;
 
+	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+
 	// send something to get it started
+
 	spi_dma_which = 0;
 	spi_dma_count = 0;
 
@@ -159,11 +174,13 @@ void
 setup()
 {
 	Serial.begin(9600);
-	pinMode(RED_PIN, OUTPUT);
-	pinMode(DEBUG_PIN, OUTPUT);
 	pinMode(DELAY_PIN, OUTPUT);
-	digitalWrite(RED_PIN, 0);
+	pinMode(DEBUG_PIN, OUTPUT);
+
+	digitalWrite(DELAY_PIN, 0);
 	digitalWrite(DEBUG_PIN, 0);
+
+	digitalWrite(SS2_PIN, 0);
 
 	pinMode(SS_PIN, OUTPUT);
 	pinMode(SS2_PIN, OUTPUT);
@@ -243,7 +260,7 @@ mpc4921_write(
 
 
 
-// x and y position are in 11-bit range
+// x and y position are in 12-bit range
 static uint16_t x_pos;
 static uint16_t y_pos;
 
@@ -253,7 +270,7 @@ goto_x(
 )
 {
 	x_pos = x;
-	mpc4921_write(1, x);
+	mpc4921_write(0, 4095 - x);
 }
 
 static inline void
@@ -262,7 +279,7 @@ goto_y(
 )
 {
 	y_pos = y;
-	mpc4921_write(0, y);
+	mpc4921_write(1, y);
 }
 
 
@@ -287,6 +304,9 @@ _lineto(
 	y1 >>= bright_shift;
 	int x0 = x_pos >> bright_shift;
 	int y0 = y_pos >> bright_shift;
+
+	goto_x(x_pos);
+	goto_y(y_pos);
 
 	if (x0 <= x1)
 	{
@@ -331,15 +351,6 @@ _lineto(
 	// ensure that we end up exactly where we want
 	goto_x(x1_orig);
 	goto_y(y1_orig);
-
-/*
-	// wait for the previous line to finish
-	while(!spi_dma_tx_complete())
-		;
-
-	// now send this line, which swaps buffers
-	spi_dma_tx();
-*/
 }
 
 
@@ -349,7 +360,20 @@ lineto(
 	int y1
 )
 {
-	_lineto(x1, y1, 2);
+#if 0
+	if (spi_dma_cs == SPI_DMA_CS_BEAM_OFF)
+	{
+		spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+		for (int i = 0 ; i < OFF_DWELL2 ; i++)
+		{
+			goto_x(x_pos);
+			goto_y(y_pos);
+		}
+	}
+#endif
+
+	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+	_lineto(x1, y1, NORMAL_SHIFT);
 }
 
 
@@ -359,7 +383,20 @@ lineto_bright(
 	int y1
 )
 {
-	_lineto(x1, y1, 0);
+#if 0
+	if (spi_dma_cs == SPI_DMA_CS_BEAM_OFF)
+	{
+		spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+		for (int i = 0 ; i < OFF_DWELL2 ; i++)
+		{
+			goto_x(x_pos);
+			goto_y(y_pos);
+		}
+	}
+#endif
+
+	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+	_lineto(x1, y1, BRIGHT_SHIFT);
 }
 
 void
@@ -368,9 +405,31 @@ lineto_off(
 	int y1
 )
 {
-	spi_dma_cs=3;
-	_lineto(x1, y1, 5);
-	spi_dma_cs=1;
+	if (spi_dma_cs != SPI_DMA_CS_BEAM_OFF)
+	{
+		for (int i = 0 ; i < OFF_DWELL0 ; i++)
+		{
+			goto_x(x_pos);
+			goto_y(y_pos);
+		}
+	}
+
+	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+
+	// hold the current position for a few clocks
+	for (int i = 0 ; i < OFF_DWELL1 ; i++)
+	{
+		goto_x(x_pos);
+		goto_y(y_pos);
+	}
+
+	_lineto(x1, y1, OFF_SHIFT);
+
+	for (int i = 0 ; i < OFF_DWELL2 ; i++)
+	{
+		goto_x(x_pos);
+		goto_y(y_pos);
+	}
 }
 
 uint8_t
@@ -434,6 +493,7 @@ read_data()
 		num_points = rx_points;
 		rx_points = 0;
 
+		digitalWriteFast(DELAY_PIN, 0);
 		//Serial.print("*** fb");
 		//Serial.print(fb);
 		//Serial.print(" ");
@@ -466,23 +526,25 @@ loop()
 
 		// make sure we flush the partial buffer
 		// once the last one has completed
-#if 0
 		if (spi_dma_tx_complete())
 		{
-			if (rx_points == 0 && now - frame_micros > 20000u)
+			if (rx_points == 0 && now - frame_micros > 25000u)
 				break;
 			spi_dma_tx();
 		}
-#endif
 
 		// start redraw when read_data is done
 		if (Serial.available() && read_data() == 1)
 			break;
 	}
 
-	frame_micros = now;
-	digitalWriteFast(DELAY_PIN, 0);
 
+	frame_micros = now;
+
+	// flag that we have started an output frame
+	digitalWriteFast(DEBUG_PIN, 1);
+
+#if 1
 	for(unsigned n = 0 ; n < num_points ; n++)
 	{
 		const uint16_t * const pt = points[n];
@@ -501,13 +563,13 @@ loop()
 			lineto_bright(x, y);
 	}
 
-	digitalWriteFast(DELAY_PIN, 1);
-	goto_x(0);
-	goto_y(0);
+	// go to the center of the screen, turn the beam off
+	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+	goto_x(2047);
+	goto_y(2047);
+#endif
 
-	while(!spi_dma_tx_complete())
-		;
-	spi_dma_tx();
-	digitalWriteFast(DELAY_PIN, 0);
+	// the USB loop above will flush eventually
+	digitalWriteFast(DEBUG_PIN, 0);
 }
 
