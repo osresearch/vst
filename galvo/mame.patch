@@ -1,5 +1,5 @@
 diff --git a/src/emu/video/vector.c b/src/emu/video/vector.c
-index 8fc32f3..a81da04 100644
+index 8fc32f3..7c17b5a 100644
 --- a/src/emu/video/vector.c
 +++ b/src/emu/video/vector.c
 @@ -36,6 +36,13 @@
@@ -61,7 +61,7 @@ index 8fc32f3..a81da04 100644
  	m_beam_width = machine().options().beam();
  
  	/* Grab the settings for this session */
-@@ -181,6 +224,51 @@ float vector_device::get_beam()
+@@ -181,6 +224,75 @@ float vector_device::get_beam()
  }
  
  
@@ -71,6 +71,14 @@ index 8fc32f3..a81da04 100644
 +static float vector_y_scale;
 +static int vector_x_off;
 +static int vector_y_off;
++static int old_x;
++static int old_y;
++static int bright_count;
++static int bright_dist;
++static int norm_count;
++static int norm_dist;
++static int off_count;
++static int off_dist;
 +
 +
 +static void
@@ -95,13 +103,29 @@ index 8fc32f3..a81da04 100644
 +	x = 2047 - x;
 +	uint32_t cmd = (y << 11) | (x << 0);
 +
++	
++	const int dx = x - old_x;
++	const int dy = y - old_y;
++	const int dist = sqrt(dx*dx + dy*dy);
++	old_x = x;
++	old_y = y;
++
 +	if (intensity == 0)
++	{
++		off_dist += dist;
++		off_count++;
 +		cmd |= (1 << 22);
-+	else
++	} else
 +	if (intensity < 128)
++	{
++		norm_dist += dist;
++		norm_count++;
 +		cmd |= (2 << 22);
-+	else
++	} else {
++		bright_dist += dist;
++		bright_count++;
 +		cmd |= (3 << 22);
++	}
 +
 +	vector_buf[vector_offset++] = (cmd >> 16) & 0xFf;
 +	vector_buf[vector_offset++] = (cmd >>  8) & 0xFf;
@@ -113,7 +137,7 @@ index 8fc32f3..a81da04 100644
  /*
   * Adds a line end point to the vertices list. The vector processor emulation
   * needs to call this.
-@@ -192,6 +280,29 @@ void vector_device::add_point (int x, int y, rgb_t color, int intensity)
+@@ -192,6 +304,29 @@ void vector_device::add_point (int x, int y, rgb_t color, int intensity)
  	if (intensity > 0xff)
  		intensity = 0xff;
  
@@ -143,7 +167,7 @@ index 8fc32f3..a81da04 100644
  	if (m_flicker && (intensity > 0))
  	{
  		intensity += (intensity * (0x80-(machine().rand()&0xff)) * m_flicker)>>16;
-@@ -222,6 +333,8 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
+@@ -222,6 +357,8 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
  {
  	point *newpoint;
  
@@ -152,7 +176,7 @@ index 8fc32f3..a81da04 100644
  	newpoint = &m_vector_list[m_vector_index];
  	newpoint->x = x1;
  	newpoint->y = yy1;
-@@ -245,6 +358,63 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
+@@ -245,6 +382,74 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
  void vector_device::clear_list (void)
  {
  	m_vector_index = 0;
@@ -166,7 +190,18 @@ index 8fc32f3..a81da04 100644
 +	const size_t len = vector_offset;
 +	vector_offset = 0;
 +
++	if (vector_fd < 0)
++		return;
++
 +	size_t offset = 0;
++	printf("vectors: %8d (%3d) %8d (%3d) %8d (%3d)\n",
++		off_dist, off_count,
++		norm_dist, norm_count,
++		bright_dist, bright_count
++	);
++	off_dist = norm_dist = bright_dist = 0;
++	off_count = norm_count = bright_count = 0;
++	old_x = old_y = 1024; // center of the screen
 +
 +	while (offset < len)
 +	{
@@ -174,10 +209,10 @@ index 8fc32f3..a81da04 100644
 +		ssize_t rc = write(vector_fd, vector_buf + offset, len - offset);
 +		if (rc <= 0)
 +		{
-+			fprintf(stderr, "fd=%d\n", vector_fd);
-+			perror("acm1");
 +			if (errno == EAGAIN)
 +				continue;
++			fprintf(stderr, "fd=%d\n", vector_fd);
++			perror("acm1");
 +			close(vector_fd);
 +			vector_fd = -1;
 +			break;
@@ -216,7 +251,7 @@ index 8fc32f3..a81da04 100644
  }
  
  
-@@ -256,11 +426,18 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+@@ -256,11 +461,18 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
  	float yscale = 1.0f / (65536 * visarea.height());
  	float xoffs = (float)visarea.min_x;
  	float yoffs = (float)visarea.min_y;
