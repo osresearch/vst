@@ -1,5 +1,5 @@
 diff --git a/src/emu/video/vector.c b/src/emu/video/vector.c
-index 8fc32f3..7c17b5a 100644
+index 8fc32f3..4468344 100644
 --- a/src/emu/video/vector.c
 +++ b/src/emu/video/vector.c
 @@ -36,6 +36,13 @@
@@ -16,13 +16,31 @@ index 8fc32f3..7c17b5a 100644
  
  #define VECTOR_WIDTH_DENOM          512
  
-@@ -146,8 +153,44 @@ float vector_device::m_beam_width = 0.0f;
+@@ -146,8 +153,70 @@ float vector_device::m_beam_width = 0.0f;
  int vector_device::m_flicker;
  int vector_device::m_vector_index;
  
 +#include <stdint.h>
 +#include <errno.h>
 +static int vector_fd;
++
++static int vector_debug;
++static uint8_t vector_buf[4096];
++static size_t vector_offset;
++static float vector_x_scale;
++static float vector_y_scale;
++static int vector_x_off;
++static int vector_y_off;
++static int old_x;
++static int old_y;
++static int bright_threshold = 127;
++static int bright_count;
++static int bright_dist;
++static int norm_count;
++static int norm_dist;
++static int off_count;
++static int off_dist;
++
 +
 +
 +int
@@ -58,29 +76,21 @@ index 8fc32f3..7c17b5a 100644
 +		perror("acm1");
 +	}
 +
++	const char * threshold_string = getenv("LASER_BRIGHT");
++	if (threshold_string)
++		bright_threshold = atoi(threshold_string);
++
++	const char * debug_string = getenv("LASER_DEBUG");
++	if (debug_string)
++		vector_debug = atoi(debug_string);
++
  	m_beam_width = machine().options().beam();
  
  	/* Grab the settings for this session */
-@@ -181,6 +224,75 @@ float vector_device::get_beam()
+@@ -181,6 +250,62 @@ float vector_device::get_beam()
  }
  
  
-+static uint8_t vector_buf[4096];
-+static size_t vector_offset;
-+static float vector_x_scale;
-+static float vector_y_scale;
-+static int vector_x_off;
-+static int vector_y_off;
-+static int old_x;
-+static int old_y;
-+static int bright_count;
-+static int bright_dist;
-+static int norm_count;
-+static int norm_dist;
-+static int off_count;
-+static int off_dist;
-+
-+
 +static void
 +goto_xy(
 +	int x0,
@@ -91,8 +101,8 @@ index 8fc32f3..7c17b5a 100644
 +	if (vector_fd < 0)
 +		return;
 +
-+	int x = (x0 - vector_x_off) * vector_x_scale * .8 + (2048*.1);
-+	int y = (y0 - vector_y_off) * vector_y_scale * .8 + (2048*.1);
++	int x = (x0 - vector_x_off) * vector_x_scale;
++	int y = (y0 - vector_y_off) * vector_y_scale;
 +	if (x < 0) x = 0;
 +	if (y < 0) y = 0;
 +	if (x > 2047) x = 2047;
@@ -116,7 +126,7 @@ index 8fc32f3..7c17b5a 100644
 +		off_count++;
 +		cmd |= (1 << 22);
 +	} else
-+	if (intensity < 128)
++	if (intensity < bright_threshold)
 +	{
 +		norm_dist += dist;
 +		norm_count++;
@@ -130,6 +140,9 @@ index 8fc32f3..7c17b5a 100644
 +	vector_buf[vector_offset++] = (cmd >> 16) & 0xFf;
 +	vector_buf[vector_offset++] = (cmd >>  8) & 0xFf;
 +	vector_buf[vector_offset++] = (cmd >>  0) & 0xFf;
++
++	if (vector_debug)
++		printf("%d,%d,%d\n", x, y, intensity);
 +}
 +
 +
@@ -137,7 +150,7 @@ index 8fc32f3..7c17b5a 100644
  /*
   * Adds a line end point to the vertices list. The vector processor emulation
   * needs to call this.
-@@ -192,6 +304,29 @@ void vector_device::add_point (int x, int y, rgb_t color, int intensity)
+@@ -192,6 +317,29 @@ void vector_device::add_point (int x, int y, rgb_t color, int intensity)
  	if (intensity > 0xff)
  		intensity = 0xff;
  
@@ -167,7 +180,7 @@ index 8fc32f3..7c17b5a 100644
  	if (m_flicker && (intensity > 0))
  	{
  		intensity += (intensity * (0x80-(machine().rand()&0xff)) * m_flicker)>>16;
-@@ -222,6 +357,8 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
+@@ -222,6 +370,8 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
  {
  	point *newpoint;
  
@@ -176,7 +189,7 @@ index 8fc32f3..7c17b5a 100644
  	newpoint = &m_vector_list[m_vector_index];
  	newpoint->x = x1;
  	newpoint->y = yy1;
-@@ -245,6 +382,74 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
+@@ -245,6 +395,74 @@ void vector_device::add_clip (int x1, int yy1, int x2, int y2)
  void vector_device::clear_list (void)
  {
  	m_vector_index = 0;
@@ -251,7 +264,7 @@ index 8fc32f3..7c17b5a 100644
  }
  
  
-@@ -256,11 +461,18 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+@@ -256,11 +474,18 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
  	float yscale = 1.0f / (65536 * visarea.height());
  	float xoffs = (float)visarea.min_x;
  	float yoffs = (float)visarea.min_y;
