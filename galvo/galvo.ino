@@ -27,7 +27,7 @@
 #define DEBUG_PIN	8
 #define DELAY_PIN	7
 
-#define MAX_PTS 2048
+#define MAX_PTS 3000
 static unsigned rx_points;
 static unsigned num_points;
 static uint16_t points[MAX_PTS][2];
