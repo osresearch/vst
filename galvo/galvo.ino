@@ -40,9 +40,10 @@ static unsigned do_resync;
 #define BRIGHT_SHIFT	0 // larger numbers == dimmer lines
 #define NORMAL_SHIFT	2
 #define OFF_SHIFT	5
-#define OFF_DWELL0	4 // time to sit beam on before starting a transit
+#define OFF_DWELL0	14 // time to sit beam on before starting a transit
 #define OFF_DWELL1	0 // time to sit before starting a transit
-#define OFF_DWELL2	6 // time to sit after finishing a transit
+#define OFF_DWELL2	19 // time to sit after finishing a transit
+//#define TRANSIT_SPEED	2000
 
 
 static DMAChannel spi_dma;
@@ -360,18 +361,6 @@ lineto(
 	int y1
 )
 {
-#if 0
-	if (spi_dma_cs == SPI_DMA_CS_BEAM_OFF)
-	{
-		spi_dma_cs = SPI_DMA_CS_BEAM_ON;
-		for (int i = 0 ; i < OFF_DWELL2 ; i++)
-		{
-			goto_x(x_pos);
-			goto_y(y_pos);
-		}
-	}
-#endif
-
 	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
 	_lineto(x1, y1, NORMAL_SHIFT);
 }
@@ -383,21 +372,25 @@ lineto_bright(
 	int y1
 )
 {
-#if 0
-	if (spi_dma_cs == SPI_DMA_CS_BEAM_OFF)
-	{
-		spi_dma_cs = SPI_DMA_CS_BEAM_ON;
-		for (int i = 0 ; i < OFF_DWELL2 ; i++)
-		{
-			goto_x(x_pos);
-			goto_y(y_pos);
-		}
-	}
-#endif
-
 	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
 	_lineto(x1, y1, BRIGHT_SHIFT);
 }
+
+
+static void
+dwell(
+	const int count
+)
+{
+	for (int i = 0 ; i < count ; i++)
+	{
+		if (i & 1)
+			goto_x(x_pos);
+		else
+			goto_y(y_pos);
+	}
+}
+
 
 void
 lineto_off(
@@ -407,29 +400,35 @@ lineto_off(
 {
 	if (spi_dma_cs != SPI_DMA_CS_BEAM_OFF)
 	{
-		for (int i = 0 ; i < OFF_DWELL0 ; i++)
-		{
-			goto_x(x_pos);
-			goto_y(y_pos);
-		}
+		// hold the current position for a few clocks
+		// with the beam on
+		dwell(OFF_DWELL0);
 	}
 
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
 
 	// hold the current position for a few clocks
-	for (int i = 0 ; i < OFF_DWELL1 ; i++)
+	// with the beam off
+	dwell(OFF_DWELL1);
+
+#if 0
+	int dx = x1 - x_pos;
+	int dy = y1 - y_pos;
+	int d2 = (dx*dx + dy*dy);
+	goto_x(x1);
+	goto_y(y1);
+
+	for(int i = 0 ; i < d2 ; i += TRANSIT_SPEED)
 	{
-		goto_x(x_pos);
-		goto_y(y_pos);
+		goto_x(x1);
+		goto_y(y1);
 	}
 
+#else
 	_lineto(x1, y1, OFF_SHIFT);
 
-	for (int i = 0 ; i < OFF_DWELL2 ; i++)
-	{
-		goto_x(x_pos);
-		goto_y(y_pos);
-	}
+	dwell(OFF_DWELL2);
+#endif
 }
 
 uint8_t
