@@ -37,7 +37,7 @@ static unsigned do_resync;
 #define LINETO		(2<<11)
 #define BRIGHTTO	(3<<11)
 
-#define BRIGHT_SHIFT	2 // larger numbers == dimmer lines
+#define BRIGHT_SHIFT	0 // larger numbers == dimmer lines
 #define NORMAL_SHIFT	2
 #define OFF_SHIFT	5
 #define OFF_DWELL0	4 // time to sit beam on before starting a transit
@@ -146,7 +146,7 @@ spi_dma_setup()
 	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
 	spi_dma.transferSize(4); // write all 32-bits of PUSHR
 
-	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+	SPI.beginTransaction(SPISettings(25000000, MSBFIRST, SPI_MODE0));
 
 	// configure the output on pin 10 for !SS0 from the SPI hardware
 	// and pin 6 for !SS1.
