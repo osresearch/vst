@@ -38,7 +38,7 @@ static unsigned do_resync;
 #define BRIGHTTO	(3<<11)
 
 #define BRIGHT_SHIFT	0 // larger numbers == dimmer lines
-#define NORMAL_SHIFT	2
+#define NORMAL_SHIFT	1
 #define OFF_SHIFT	5
 #define OFF_DWELL0	14 // time to sit beam on before starting a transit
 #define OFF_DWELL1	0 // time to sit before starting a transit
@@ -147,7 +147,7 @@ spi_dma_setup()
 	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
 	spi_dma.transferSize(4); // write all 32-bits of PUSHR
 
-	SPI.beginTransaction(SPISettings(25000000, MSBFIRST, SPI_MODE0));
+	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
 
 	// configure the output on pin 10 for !SS0 from the SPI hardware
 	// and pin 6 for !SS1.
@@ -188,31 +188,118 @@ setup()
 	pinMode(SDI, OUTPUT);
 	pinMode(SCK, OUTPUT);
 
-#if 0
-	// fill in some points so that we don't burn in the beam
-	points[0][0][0] = 0 | MOVETO;
-	points[0][0][1] = 0;
-	points[0][1][0] = 2047 | LINETO;
-	points[0][1][1] = 0;
-	points[0][2][0] = 2047 | LINETO;
-	points[0][2][1] = 2047;
-	points[0][3][0] = 0 | LINETO;
-	points[0][3][1] = 2047;
-	points[0][4][0] = 0 | LINETO;
-	points[0][4][1] = 0;
-	points[0][5][0] = 1024 | BRIGHTTO;
-	points[0][5][1] = 2047;
-	points[0][6][0] = 2047 | BRIGHTTO;
-	points[0][6][1] = 1024;
-	points[0][7][0] = 0 | BRIGHTTO;
-	points[0][7][1] = 0;
-	points[0][8][0] = 2047 | LINETO;
-	points[0][8][1] = 512;
-	points[0][9][0] = 0 | MOVETO;
-	points[0][9][1] = 0;
-	points[0][10][0] = 2047 | LINETO;
-	points[0][10][1] = 256;
-	num_points = 11;
+#if 1
+	// fill in some points for test and calibration
+	int i = 0;
+	points[i][0] = 0 | MOVETO;
+	points[i++][1] = 0;
+	points[i][0] = 512 | LINETO;
+	points[i++][1] = 0;
+	points[i][0] = 512 | LINETO;
+	points[i++][1] = 512;
+	points[i][0] = 0 | LINETO;
+	points[i++][1] = 512;
+	points[i][0] = 0 | LINETO;
+	points[i++][1] = 0;
+
+	points[i][0] = 2047 | MOVETO;
+	points[i++][1] = 0;
+	points[i][0] = (2047 - 128) | LINETO;
+	points[i++][1] = 0;
+	points[i][0] = (2047 - 0) | LINETO;
+	points[i++][1] = 128;
+	points[i][0] = 2047 | LINETO;
+	points[i++][1] = 0;
+
+	points[i][0] = 2047 | MOVETO;
+	points[i++][1] = 2047;
+	points[i][0] = (2047 - 128) | LINETO;
+	points[i++][1] = 2047;
+	points[i][0] = (2047 - 128) | LINETO;
+	points[i++][1] = (2047 - 128);
+	points[i][0] = (2047 - 0) | LINETO;
+	points[i++][1] = (2047 - 128);
+	points[i][0] = 2047 | LINETO;
+	points[i++][1] = 2047;
+
+	points[i][0] = 0 | MOVETO;
+	points[i++][1] = 2047;
+	points[i][0] = 128 | LINETO;
+	points[i++][1] = 2047;
+	points[i][0] = 128 | LINETO;
+	points[i++][1] = (2047 - 128);
+	points[i][0] = 0 | LINETO;
+	points[i++][1] = (2047 - 128);
+	points[i][0] = 0 | LINETO;
+	points[i++][1] = 2047;
+
+	points[i][0] = 1024 | MOVETO;
+	points[i++][1] = 512;
+	points[i][0] = 1024 | BRIGHTTO;
+	points[i++][1] = 1024+512;
+
+	points[i][0] = 512 | MOVETO;
+	points[i++][1] = 1024;
+	points[i][0] = (1024+512) | BRIGHTTO;
+	points[i++][1] = 1024;
+
+	for(unsigned j = 0 ; j <= 512 ; j += 64)
+	{
+		points[i][0] = 0 | MOVETO;
+		points[i++][1] = 0;
+		points[i][0] = 512 | LINETO;
+		points[i++][1] = j;
+	}
+
+	for(unsigned j = 0 ; j < 512 ; j += 64)
+	{
+		points[i][0] = 0 | MOVETO;
+		points[i++][1] = 0;
+		points[i][0] = j | LINETO;
+		points[i++][1] = 512;
+	}
+
+	// and a small v.st logo
+	const int vx = 1024+256;
+	const int vy = 1024+512;
+	const int doty = vy-12*8;
+	const int dotx = vx;
+	const int sy = vy-24*8;
+	const int sx = vx;
+	const int ty = vy-36*8;
+	const int tx = vx;
+
+#define MOVE_LINE(x,y, dx, dy) do { \
+	points[i][0] = (x + dy*8) | MOVETO; \
+	points[i++][1] = (y - dx*8); \
+} while(0)
+#define DRAW_LINE(x,y, dx,dy) do { \
+	points[i][0] = (x + dy*8) | LINETO; \
+	points[i++][1] = (y - dx*8); \
+} while(0)
+
+	MOVE_LINE(vx, vy, 0, 12);
+	DRAW_LINE(vx, vy, 4, 0);
+	DRAW_LINE(vx, vy, 8, 12);
+
+	MOVE_LINE(dotx, doty, 3, 0);
+	DRAW_LINE(dotx, doty, 4, 0);
+
+	MOVE_LINE(sx, sy, 0, 2);
+	DRAW_LINE(sx, sy, 2, 0);
+	DRAW_LINE(sx, sy, 8, 0);
+	DRAW_LINE(sx, sy, 8, 5);
+	DRAW_LINE(sx, sy, 0, 7);
+	DRAW_LINE(sx, sy, 0, 12);
+	DRAW_LINE(sx, sy, 6, 12);
+	DRAW_LINE(sx, sy, 8, 10);
+
+	MOVE_LINE(tx, ty, 0, 12);
+	DRAW_LINE(tx, ty, 8, 12);
+	MOVE_LINE(tx, ty, 4, 12);
+	DRAW_LINE(tx, ty, 4, 0);
+
+	num_points = i;
 #endif
 	
 
@@ -550,8 +637,13 @@ loop()
 		uint16_t x = pt[0];
 		uint16_t y = pt[1];
 		unsigned intensity = (x >> 11) & 0x3;
+#if 0
 		x = (x & 0x7FF) << 1;
 		y = (y & 0x7FF) << 1;
+#else
+		x = ((x & 0x7FF) * 3)/2 + 512;
+		y = ((y & 0x7FF) * 3)/2 + 768;
+#endif
 
 		if (intensity == 1)
 			lineto_off(x,y);
