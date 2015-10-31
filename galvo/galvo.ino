@@ -37,8 +37,14 @@ static unsigned do_resync;
 #define LINETO		(2<<11)
 #define BRIGHTTO	(3<<11)
 
+#define FLIP_Y
+#undef FLIP_X
+#define SWAP_XY
+#define LINE_BRIGHT_DOUBLE
+
 #define BRIGHT_SHIFT	0 // larger numbers == dimmer lines
 #define NORMAL_SHIFT	1
+#define OFF_JUMP	// don't wait, just go!
 #define OFF_SHIFT	5
 #define OFF_DWELL0	14 // time to sit beam on before starting a transit
 #define OFF_DWELL1	0 // time to sit before starting a transit
@@ -147,7 +153,7 @@ spi_dma_setup()
 	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
 	spi_dma.transferSize(4); // write all 32-bits of PUSHR
 
-	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
+	SPI.beginTransaction(SPISettings(25000000, MSBFIRST, SPI_MODE0));
 
 	// configure the output on pin 10 for !SS0 from the SPI hardware
 	// and pin 6 for !SS1.
@@ -326,8 +332,13 @@ mpc4921_write(
 {
 	value &= 0x0FFF; // mask out just the 12 bits of data
 
+#if 1
 	// select the output channel, buffered, no gain
 	value |= 0x7000 | (channel == 1 ? 0x8000 : 0x0000);
+#else
+	// select the output channel, unbuffered, no gain
+	value |= 0x3000 | (channel == 1 ? 0x8000 : 0x0000);
+#endif
 
 #ifdef SLOW_SPI
 	SPI.transfer((value >> 8) & 0xFF);
@@ -352,13 +363,25 @@ mpc4921_write(
 static uint16_t x_pos;
 static uint16_t y_pos;
 
+#ifdef SWAP_XY
+#define DAC_X_CHAN 1
+#define DAC_Y_CHAN 0
+#else
+#define DAC_X_CHAN 0
+#define DAC_Y_CHAN 1
+#endif
+
 static inline void
 goto_x(
 	uint16_t x
 )
 {
 	x_pos = x;
-	mpc4921_write(0, 4095 - x);
+#ifdef FLIP_X
+	mpc4921_write(DAC_X_CHAN, 4095 - x);
+#else
+	mpc4921_write(DAC_X_CHAN, x);
+#endif
 }
 
 static inline void
@@ -367,7 +390,11 @@ goto_y(
 )
 {
 	y_pos = y;
-	mpc4921_write(1, y);
+#ifdef FLIP_Y
+	mpc4921_write(DAC_Y_CHAN, 4095 - y);
+#else
+	mpc4921_write(DAC_Y_CHAN, y);
+#endif
 }
 
 
@@ -434,6 +461,14 @@ _lineto(
 			y0 += sy;
 			goto_y(y_off + (y0 << bright_shift));
 		}
+
+#ifdef LINE_BRIGHT_DOUBLE
+		if (bright_shift == 0)
+		{
+			goto_x(x_off + (x0 << bright_shift));
+			goto_y(y_off + (y0 << bright_shift));
+		}
+#endif
 	}
 
 	// ensure that we end up exactly where we want
@@ -485,6 +520,11 @@ lineto_off(
 	int y1
 )
 {
+#ifdef OFF_JUMP
+	goto_x(x1);
+	goto_y(y1);
+#else
+	
 	if (spi_dma_cs != SPI_DMA_CS_BEAM_OFF)
 	{
 		// hold the current position for a few clocks
@@ -515,6 +555,7 @@ lineto_off(
 	_lineto(x1, y1, OFF_SHIFT);
 
 	dwell(OFF_DWELL2);
+#endif
 #endif
 }
 
@@ -641,8 +682,8 @@ loop()
 		x = (x & 0x7FF) << 1;
 		y = (y & 0x7FF) << 1;
 #else
-		x = ((x & 0x7FF) * 3)/2 + 512;
-		y = ((y & 0x7FF) * 3)/2 + 768;
+		x = ((x & 0x7FF) >> 0) + 1024;
+		y = ((y & 0x7FF) >> 0) + 1024;
 #endif
 
 		if (intensity == 1)
@@ -656,8 +697,14 @@ loop()
 
 	// go to the center of the screen, turn the beam off
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+
+#if 0
 	goto_x(2047);
 	goto_y(2047);
+#else
+	goto_x(0);
+	goto_y(0);
+#endif
 #endif
 
 	// the USB loop above will flush eventually
