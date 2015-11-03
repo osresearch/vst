@@ -147,6 +147,14 @@
 <text x="3.175" y="9.525" size="1.778" layer="25" font="vector" rot="R90">B</text>
 <text x="3.175" y="14.605" size="1.778" layer="25" font="vector" rot="R90">Y</text>
 <text x="3.175" y="19.685" size="1.778" layer="25" font="vector" rot="R90">X</text>
+<text x="87.63" y="18.415" size="1.27" layer="26" font="vector" rot="MR0">+3</text>
+<text x="87.63" y="20.955" size="1.27" layer="26" font="vector" rot="MR0">A0</text>
+<text x="87.63" y="23.495" size="1.27" layer="26" font="vector" rot="MR0">A1</text>
+<text x="87.63" y="26.035" size="1.27" layer="26" font="vector" rot="MR0">A2</text>
+<text x="87.63" y="28.575" size="1.27" layer="26" font="vector" rot="MR0">A3</text>
+<text x="87.63" y="31.115" size="1.27" layer="26" font="vector" rot="MR0">A4</text>
+<text x="87.63" y="33.655" size="1.27" layer="26" font="vector" rot="MR0">A5</text>
+<text x="88.9" y="15.875" size="1.27" layer="26" font="vector" rot="MR0">GND</text>
 </plain>
 <libraries>
 <library name="dc-dc-converter">
@@ -1053,8 +1061,8 @@ design rules under a new name.</description>
 <vertex x="63.5" y="-1.27"/>
 <vertex x="63.5" y="7.62"/>
 <vertex x="77.47" y="7.62"/>
-<vertex x="77.47" y="38.1"/>
-<vertex x="1.27" y="38.1"/>
+<vertex x="77.47" y="37.465"/>
+<vertex x="1.27" y="37.465"/>
 </polygon>
 <contactref element="C13" pad="2"/>
 <polygon width="0.254" layer="1" spacing="0.6096">
@@ -1063,9 +1071,9 @@ design rules under a new name.</description>
 <vertex x="99.06" y="-1.27"/>
 <vertex x="63.5" y="-1.27"/>
 <vertex x="63.5" y="7.62"/>
-<vertex x="77.47" y="7.62"/>
-<vertex x="77.47" y="38.1"/>
-<vertex x="1.27" y="38.1"/>
+<vertex x="76.835" y="7.62"/>
+<vertex x="76.835" y="37.465"/>
+<vertex x="1.27" y="37.465"/>
 </polygon>
 <via x="13.97" y="40.64" extent="1-16" drill="0.6" shape="square"/>
 <via x="45.72" y="40.64" extent="1-16" drill="0.6" shape="square"/>
@@ -1181,14 +1189,14 @@ design rules under a new name.</description>
 <contactref element="IC10" pad="3"/>
 <wire x1="96.52" y1="21.59" x2="93.98" y2="21.59" width="0.6096" layer="1"/>
 <wire x1="93.98" y1="21.59" x2="85.09" y2="30.48" width="0.6096" layer="1"/>
-<wire x1="85.09" y1="30.48" x2="78.74" y2="30.48" width="0.3048" layer="1"/>
-<wire x1="78.74" y1="30.48" x2="77.47" y2="31.75" width="0.6096" layer="1"/>
-<wire x1="77.47" y1="31.75" x2="77.47" y2="36.195" width="0.6096" layer="1"/>
+<wire x1="85.09" y1="30.48" x2="80.01" y2="30.48" width="0.3048" layer="1"/>
+<wire x1="80.01" y1="30.48" x2="77.47" y2="33.02" width="0.6096" layer="1"/>
+<wire x1="77.47" y1="33.02" x2="77.47" y2="36.195" width="0.6096" layer="1"/>
 <wire x1="77.47" y1="36.195" x2="76.2" y2="37.465" width="0.6096" layer="1"/>
-<wire x1="76.2" y1="37.465" x2="68.58" y2="37.465" width="0.6096" layer="1"/>
-<wire x1="68.58" y1="37.465" x2="67.945" y2="38.1" width="0.6096" layer="1"/>
-<wire x1="67.945" y1="38.1" x2="29.21" y2="38.1" width="0.6096" layer="1"/>
-<wire x1="29.21" y1="38.1" x2="27.94" y2="39.37" width="0.6096" layer="1"/>
+<wire x1="76.2" y1="37.465" x2="57.15" y2="37.465" width="0.6096" layer="1"/>
+<wire x1="57.15" y1="37.465" x2="55.88" y2="38.735" width="0.6096" layer="1"/>
+<wire x1="55.88" y1="38.735" x2="28.575" y2="38.735" width="0.6096" layer="1"/>
+<wire x1="28.575" y1="38.735" x2="27.94" y2="39.37" width="0.6096" layer="1"/>
 <wire x1="27.94" y1="39.37" x2="27.94" y2="40.64" width="0.6096" layer="1"/>
 </signal>
 <signal name="!SS0">
@@ -1507,6 +1515,31 @@ design rules under a new name.</description>
 <wire x1="7.62" y1="10.16" x2="5.08" y2="10.16" width="0.6096" layer="1"/>
 </signal>
 </signals>
+<errors>
+<approved hash="1,20,1ce3c503c4791d99"/>
+<approved hash="1,20,1281946194a71247"/>
+<approved hash="1,20,5c806560659f5c7f"/>
+<approved hash="1,20,62b2435240746194"/>
+<approved hash="18,29,e27968a748e0023e"/>
+<approved hash="18,29,6a8f209180d60ac8"/>
+<approved hash="18,29,d1b08f2a97021999"/>
+<approved hash="18,29,9fd2f14a7163dffb"/>
+<approved hash="18,29,9dc2b35ab373ddeb"/>
+<approved hash="18,29,dfc4915c91759fed"/>
+<approved hash="18,29,b4067573b718b046"/>
+<approved hash="18,29,09ae6b349514f74e"/>
+<approved hash="18,29,e5396079e0476507"/>
+<approved hash="18,29,81f20432840c01cc"/>
+<approved hash="18,29,b8150ecbee94584a"/>
+<approved hash="18,29,a16717f9f7a64138"/>
+<approved hash="18,29,3d208cad68eb2037"/>
+<approved hash="18,29,8b0e04f563ca4b89"/>
+<approved hash="18,29,66c6b9d2b59b6717"/>
+<approved hash="18,29,7aceb9cab59b7b17"/>
+<approved hash="18,29,8ccc1712f7552c8b"/>
+<approved hash="18,29,23c41c18006d3fb6"/>
+<approved hash="18,29,beb34639137cd476"/>
+</errors>
 </board>
 </drawing>
 <compatibility>
