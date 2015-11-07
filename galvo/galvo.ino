@@ -26,6 +26,7 @@
 
 #define DEBUG_PIN	8
 #define DELAY_PIN	7
+#define IO_PIN	5
 
 #define MAX_PTS 3000
 static unsigned rx_points;
@@ -188,9 +189,11 @@ setup()
 	Serial.begin(9600);
 	pinMode(DELAY_PIN, OUTPUT);
 	pinMode(DEBUG_PIN, OUTPUT);
+	pinMode(IO_PIN, OUTPUT);
 
 	digitalWrite(DELAY_PIN, 0);
 	digitalWrite(DEBUG_PIN, 0);
+	digitalWrite(IO_PIN, 0);
 
 	digitalWrite(SS2_PIN, 0);
 
@@ -586,6 +589,8 @@ read_data()
 	if (c < 0)
 		return -1;
 
+	digitalWriteFast(IO_PIN, 1);
+
 	//Serial.print("----- read: ");
 	//Serial.println(c);
 
@@ -628,6 +633,7 @@ read_data()
 		//Serial.print(fb);
 		//Serial.print(" ");
 		//Serial.println(num_points);
+		digitalWriteFast(IO_PIN, 0);
 		return 1;
 	}
 
@@ -668,6 +674,10 @@ loop()
 			break;
 	}
 
+	// if there are any DMAs currently in transit, wait for them
+	// to complete.
+	while (!spi_dma_tx_complete())
+		;
 
 	frame_micros = now;
 
