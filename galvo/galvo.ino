@@ -54,6 +54,7 @@ static unsigned do_resync;
 
 static DMAChannel spi_dma;
 #define SPI_DMA_MAX 4096
+//#define SPI_DMA_MAX 1024
 static uint32_t spi_dma_q[2][SPI_DMA_MAX];
 static unsigned spi_dma_which;
 static unsigned spi_dma_count;
@@ -85,6 +86,8 @@ spi_dma_tx()
 {
 	if (spi_dma_count == 0)
 		return;
+
+	digitalWriteFast(DELAY_PIN, 1);
 
 	// add a EOQ to the last entry
 	spi_dma_q[spi_dma_which][spi_dma_count-1] |= (1<<27);
@@ -129,6 +132,8 @@ spi_dma_tx_complete()
 		return 0;
 	}
 
+	digitalWriteFast(DELAY_PIN, 0);
+
 	spi_dma.clearComplete();
 	spi_dma.clearError();
 
@@ -153,7 +158,7 @@ spi_dma_setup()
 	spi_dma.triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
 	spi_dma.transferSize(4); // write all 32-bits of PUSHR
 
-	SPI.beginTransaction(SPISettings(25000000, MSBFIRST, SPI_MODE0));
+	SPI.beginTransaction(SPISettings(20000000, MSBFIRST, SPI_MODE0));
 
 	// configure the output on pin 10 for !SS0 from the SPI hardware
 	// and pin 6 for !SS1.
@@ -581,7 +586,6 @@ read_data()
 	if (c < 0)
 		return -1;
 
-	digitalWriteFast(DELAY_PIN, 1);
 	//Serial.print("----- read: ");
 	//Serial.println(c);
 
@@ -620,7 +624,6 @@ read_data()
 		num_points = rx_points;
 		rx_points = 0;
 
-		digitalWriteFast(DELAY_PIN, 0);
 		//Serial.print("*** fb");
 		//Serial.print(fb);
 		//Serial.print(" ");
