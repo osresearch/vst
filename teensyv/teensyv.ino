@@ -21,8 +21,8 @@
 #include <SPI.h>
 #include "DMAChannel.h"
 
-//#define CONFIG_VECTREX
-#define CONFIG_VECTORSCOPE
+#define CONFIG_VECTREX
+//#define CONFIG_VECTORSCOPE
 
 
 #if defined(CONFIG_VECTORSCOPE)
@@ -74,8 +74,8 @@
 #define REST_Y		2048
 
 #define BRIGHT_OFF	2048	// "0 volts", relative to reference
-#define BRIGHT_NORMAL	3700	// fairly bright
-#define BRIGHT_BRIGHT	4000	// super bright
+#define BRIGHT_NORMAL	3400	// fairly bright
+#define BRIGHT_BRIGHT	4095	// super bright
 
 #define FULL_SCALE		// use the full -2.5 to 2.5V range
 
