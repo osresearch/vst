@@ -1,8 +1,12 @@
 /** \file
  * Vector display using the MCP4921 DAC on the teensy3.1.
  *
- * this uses the DMA hardware to drive the SPI output and
- * the second chip select pin (6) to enable/disable the beam.
+ * More info: https://trmm.net/V.st
+ *
+ * This uses the DMA hardware to drive the SPI output to two DACs,
+ * one on SS0 and one on SS1.  The first two DACs are used for the
+ * XY position, the third DAC for brightness and the fourth to generate
+ * a 2.5V reference signal for the mid-point.
  *
  * format of commands is 3-bytes per command.
  * 2 bits
@@ -13,11 +17,72 @@
  * 11 bits of X (or number of lines)
  * 11 bits of Y
  *
- * the Z axis on the vectrex needs to swing 0 to 5V, so it uses
- * an NPN transistor to switch it totally off.
  */
 #include <SPI.h>
 #include "DMAChannel.h"
+
+//#define CONFIG_VECTREX
+#define CONFIG_VECTORSCOPE
+
+
+#if defined(CONFIG_VECTORSCOPE)
+/** Vectorscope configuration.
+ *
+ * Vectorscopes and oscilloscopes have electrostatic beam deflection
+ * and can steer the beam much faster, so there is no need to dwell or
+ * wait for the beam to catch up during transits.
+ *
+ * Most of them do not have a Z input, so we move the beam to an extreme
+ * during the blanking interval.
+ */
+#define BRIGHT_SHIFT	1	// larger numbers == dimmer lines
+#define NORMAL_SHIFT	1
+#define OFF_JUMP		// don't wait for beam, just go!
+#define REST_X		0	// wait off screen
+#define REST_Y		0
+
+#undef FULL_SCALE		// only use -1.25 to 1.25V range
+
+// most vector scopes don't have brightness control, but set it anyway
+#define BRIGHT_OFF	2048	// "0 volts", relative to reference
+#define BRIGHT_NORMAL	3700	// fairly bright
+#define BRIGHT_BRIGHT	4000	// super bright
+
+
+#elif defined(CONFIG_VECTREX)
+/** Vectrex configuration.
+ *
+ * Vectrex monitors use magnetic steering and are much slower to respond
+ * to changes.  As a result we must dwell on the end points and wait for
+ * the beam to catch up during transits.
+ *
+ * It does have a Z input for brightness, which has three configurable
+ * brightnesses (off, normal and bright).  These were experimentally
+ * determined and might not be right for all monitors.
+ */
+
+#define BRIGHT_SHIFT	3	// larger numbers == dimmer lines
+#define NORMAL_SHIFT	3
+#undef OFF_JUMP			// don't wait, just go!
+
+#define OFF_SHIFT	5	// smaller numbers == slower transits
+#define OFF_DWELL0	14	// time to sit beam on before starting a transit
+#define OFF_DWELL1	0	// time to sit before starting a transit
+#define OFF_DWELL2	19	// time to sit after finishing a transit
+
+#define REST_X		2048	// wait in the center of the screen
+#define REST_Y		2048
+
+#define BRIGHT_OFF	2048	// "0 volts", relative to reference
+#define BRIGHT_NORMAL	3700	// fairly bright
+#define BRIGHT_BRIGHT	4000	// super bright
+
+#define FULL_SCALE		// use the full -2.5 to 2.5V range
+
+#else
+#error "One of CONFIG_VECTORSCOPE or CONFIG_VECTREX must be defined"
+#endif
+
 
 #define SS_PIN	10
 #define SS2_PIN	6
@@ -38,10 +103,6 @@ static unsigned do_resync;
 #define LINETO		(2<<11)
 #define BRIGHTTO	(3<<11)
 
-static unsigned bright_off = 0;
-int bright_x = 2048;
-
-
 
 
 #undef FLIP_Y
@@ -49,24 +110,9 @@ int bright_x = 2048;
 #undef SWAP_XY
 #undef LINE_BRIGHT_DOUBLE
 
-#define BRIGHT_SHIFT	1 // larger numbers == dimmer lines
-#define NORMAL_SHIFT	1
-#undef OFF_JUMP	// don't wait, just go!
-#define OFF_SHIFT	5
-#define OFF_DWELL0	14 // time to sit beam on before starting a transit
-#define OFF_DWELL1	0 // time to sit before starting a transit
-#define OFF_DWELL2	19 // time to sit after finishing a transit
-//#define TRANSIT_SPEED	2000
 
 #define CONFIG_DACZ	// If there is a Z dac, rather than a PNP
 
-#ifdef OFF_JUMP
-#define REST_X 0
-#define REST_Y 0
-#else
-#define REST_X 2048
-#define REST_Y 2048
-#endif
 
 static DMAChannel spi_dma;
 #define SPI_DMA_MAX 4096
@@ -519,9 +565,7 @@ lineto(
 	int y1
 )
 {
-#ifdef CONFIG_DACZ
-	brightness(3700);
-#endif
+	brightness(BRIGHT_NORMAL);
 	_lineto(x1, y1, NORMAL_SHIFT);
 }
 
@@ -531,9 +575,7 @@ lineto_bright(
 	int y1
 )
 {
-#ifdef CONFIG_DACZ
-	brightness(4095);
-#endif
+	brightness(BRIGHT_BRIGHT);
 	_lineto(x1, y1, BRIGHT_SHIFT);
 }
 
@@ -559,34 +601,20 @@ lineto_off(
 	int y1
 )
 {
+	brightness(BRIGHT_OFF);
+
 #ifdef OFF_JUMP
 	goto_x(x1);
 	goto_y(y1);
 #else
-	
-#ifdef CONFIG_DACZ
-	brightness(bright_off); // halfway
-#else
-
-	if (spi_dma_cs != SPI_DMA_CS_BEAM_OFF)
-	{
-		// hold the current position for a few clocks
-		// with the beam on
-		dwell(OFF_DWELL0);
-	}
-
-	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
-#endif
-
 	// hold the current position for a few clocks
 	// with the beam off
 	dwell(OFF_DWELL1);
 	_lineto(x1, y1, OFF_SHIFT);
-
-
 	dwell(OFF_DWELL2);
 #endif // OFF_JUMP
 }
+
 
 uint8_t
 read_blocking()
@@ -611,24 +639,6 @@ read_data()
 		return -1;
 
 	digitalWriteFast(IO_PIN, 1);
-
-#if 0
-	static int new_bright = 0;
-	if ('0' <= c && c <= '9')
-	{
-		new_bright = (new_bright * 10) + c - '0';
-		return 0;
-	}
-
-	if (c == '\n')
-	{
-		bright_x = new_bright;
-		new_bright = 0;
-		return 1;
-	}
-
-	return -1;
-#endif
 
 	//Serial.print("----- read: ");
 	//Serial.println(c);
@@ -729,7 +739,7 @@ loop()
 		uint16_t x = pt[0];
 		uint16_t y = pt[1];
 		unsigned intensity = (x >> 11) & 0x3;
-#if 0
+#ifdef FULL_SCALE
 		x = (x & 0x7FF) << 1;
 		y = (y & 0x7FF) << 1;
 #else
@@ -747,14 +757,12 @@ loop()
 	}
 
 	// go to the center of the screen, turn the beam off
-	brightness(bright_off);
+	brightness(BRIGHT_OFF);
 
 	goto_x(REST_X);
 	goto_y(REST_Y);
 
 	// the USB loop above will flush eventually
 	digitalWriteFast(DEBUG_PIN, 0);
-
-	Serial.println(bright_x);
 }
 
