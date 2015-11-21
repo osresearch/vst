@@ -21,8 +21,8 @@
 #include <SPI.h>
 #include "DMAChannel.h"
 
-#define CONFIG_VECTREX
-//#define CONFIG_VECTORSCOPE
+//#define CONFIG_VECTREX
+#define CONFIG_VECTORSCOPE
 
 
 #if defined(CONFIG_VECTORSCOPE)
@@ -35,8 +35,8 @@
  * Most of them do not have a Z input, so we move the beam to an extreme
  * during the blanking interval.
  */
-#define BRIGHT_SHIFT	1	// larger numbers == dimmer lines
-#define NORMAL_SHIFT	1
+#define BRIGHT_SHIFT	0	// larger numbers == dimmer lines
+#define NORMAL_SHIFT	1	// no z-axis, so we must have a difference
 #define OFF_JUMP		// don't wait for beam, just go!
 #define REST_X		0	// wait off screen
 #define REST_Y		0
@@ -62,7 +62,7 @@
  */
 
 #define BRIGHT_SHIFT	3	// larger numbers == dimmer lines
-#define NORMAL_SHIFT	3
+#define NORMAL_SHIFT	3	// but we can control with Z axis
 #undef OFF_JUMP			// don't wait, just go!
 
 #define OFF_SHIFT	5	// smaller numbers == slower transits
