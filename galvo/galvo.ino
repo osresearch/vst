@@ -38,31 +38,46 @@ static unsigned do_resync;
 #define LINETO		(2<<11)
 #define BRIGHTTO	(3<<11)
 
-#define FLIP_Y
-#undef FLIP_X
-#define SWAP_XY
-#define LINE_BRIGHT_DOUBLE
+static unsigned bright_off = 0;
+int bright_x = 2048;
 
-#define BRIGHT_SHIFT	0 // larger numbers == dimmer lines
+
+
+
+#undef FLIP_Y
+#undef FLIP_X
+#undef SWAP_XY
+#undef LINE_BRIGHT_DOUBLE
+
+#define BRIGHT_SHIFT	1 // larger numbers == dimmer lines
 #define NORMAL_SHIFT	1
-#define OFF_JUMP	// don't wait, just go!
+#undef OFF_JUMP	// don't wait, just go!
 #define OFF_SHIFT	5
 #define OFF_DWELL0	14 // time to sit beam on before starting a transit
 #define OFF_DWELL1	0 // time to sit before starting a transit
 #define OFF_DWELL2	19 // time to sit after finishing a transit
 //#define TRANSIT_SPEED	2000
 
+#define CONFIG_DACZ	// If there is a Z dac, rather than a PNP
+
+#ifdef OFF_JUMP
+#define REST_X 0
+#define REST_Y 0
+#else
+#define REST_X 2048
+#define REST_Y 2048
+#endif
 
 static DMAChannel spi_dma;
 #define SPI_DMA_MAX 4096
-//#define SPI_DMA_MAX 1024
+//#define SPI_DMA_MAX 2048
 static uint32_t spi_dma_q[2][SPI_DMA_MAX];
 static unsigned spi_dma_which;
 static unsigned spi_dma_count;
 static unsigned spi_dma_in_progress;
 static unsigned spi_dma_cs; // which pins are we using for IO
 
-#define SPI_DMA_CS_BEAM_ON 3
+#define SPI_DMA_CS_BEAM_ON 2
 #define SPI_DMA_CS_BEAM_OFF 1
 
 
@@ -168,8 +183,6 @@ spi_dma_setup()
 
 	// configure the frame size for 16-bit transfers
 	SPI0_CTAR0 |= 0xF << 27;
-
-	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
 
 	// send something to get it started
 
@@ -405,6 +418,21 @@ goto_y(
 #endif
 }
 
+static inline void
+brightness(
+	uint16_t bright
+)
+{
+#ifdef CONFIG_DACZ
+	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+	mpc4921_write(1, 2048);
+	mpc4921_write(0, bright);
+	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+#else
+	// nothing to do
+	(void) bright;
+#endif
+}
 
 static inline void
 _lineto(
@@ -491,10 +519,11 @@ lineto(
 	int y1
 )
 {
-	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+#ifdef CONFIG_DACZ
+	brightness(3700);
+#endif
 	_lineto(x1, y1, NORMAL_SHIFT);
 }
-
 
 void
 lineto_bright(
@@ -502,7 +531,9 @@ lineto_bright(
 	int y1
 )
 {
-	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+#ifdef CONFIG_DACZ
+	brightness(4095);
+#endif
 	_lineto(x1, y1, BRIGHT_SHIFT);
 }
 
@@ -533,6 +564,10 @@ lineto_off(
 	goto_y(y1);
 #else
 	
+#ifdef CONFIG_DACZ
+	brightness(bright_off); // halfway
+#else
+
 	if (spi_dma_cs != SPI_DMA_CS_BEAM_OFF)
 	{
 		// hold the current position for a few clocks
@@ -541,30 +576,16 @@ lineto_off(
 	}
 
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+#endif
 
 	// hold the current position for a few clocks
 	// with the beam off
 	dwell(OFF_DWELL1);
-
-#if 0
-	int dx = x1 - x_pos;
-	int dy = y1 - y_pos;
-	int d2 = (dx*dx + dy*dy);
-	goto_x(x1);
-	goto_y(y1);
-
-	for(int i = 0 ; i < d2 ; i += TRANSIT_SPEED)
-	{
-		goto_x(x1);
-		goto_y(y1);
-	}
-
-#else
 	_lineto(x1, y1, OFF_SHIFT);
 
+
 	dwell(OFF_DWELL2);
-#endif
-#endif
+#endif // OFF_JUMP
 }
 
 uint8_t
@@ -590,6 +611,24 @@ read_data()
 		return -1;
 
 	digitalWriteFast(IO_PIN, 1);
+
+#if 0
+	static int new_bright = 0;
+	if ('0' <= c && c <= '9')
+	{
+		new_bright = (new_bright * 10) + c - '0';
+		return 0;
+	}
+
+	if (c == '\n')
+	{
+		bright_x = new_bright;
+		new_bright = 0;
+		return 1;
+	}
+
+	return -1;
+#endif
 
 	//Serial.print("----- read: ");
 	//Serial.println(c);
@@ -684,7 +723,6 @@ loop()
 	// flag that we have started an output frame
 	digitalWriteFast(DEBUG_PIN, 1);
 
-#if 1
 	for(unsigned n = 0 ; n < num_points ; n++)
 	{
 		const uint16_t * const pt = points[n];
@@ -709,18 +747,14 @@ loop()
 	}
 
 	// go to the center of the screen, turn the beam off
-	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+	brightness(bright_off);
 
-#if 0
-	goto_x(2047);
-	goto_y(2047);
-#else
-	goto_x(0);
-	goto_y(0);
-#endif
-#endif
+	goto_x(REST_X);
+	goto_y(REST_Y);
 
 	// the USB loop above will flush eventually
 	digitalWriteFast(DEBUG_PIN, 0);
+
+	Serial.println(bright_x);
 }
 
