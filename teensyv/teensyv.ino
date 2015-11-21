@@ -21,8 +21,14 @@
 #include <SPI.h>
 #include "DMAChannel.h"
 
-//#define CONFIG_VECTREX
-#define CONFIG_VECTORSCOPE
+#define CONFIG_VECTREX
+//#define CONFIG_VECTORSCOPE
+
+
+// Sometimes the X and Y need to be flipped and/or swapped
+#define FLIP_X
+#undef FLIP_Y
+#define SWAP_XY
 
 
 #if defined(CONFIG_VECTORSCOPE)
@@ -105,13 +111,8 @@ static unsigned do_resync;
 
 
 
-#undef FLIP_Y
-#undef FLIP_X
-#undef SWAP_XY
 #undef LINE_BRIGHT_DOUBLE
 
-
-#define CONFIG_DACZ	// If there is a Z dac, rather than a PNP
 
 
 static DMAChannel spi_dma;
@@ -469,15 +470,10 @@ brightness(
 	uint16_t bright
 )
 {
-#ifdef CONFIG_DACZ
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
 	mpc4921_write(1, 2048);
 	mpc4921_write(0, bright);
 	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
-#else
-	// nothing to do
-	(void) bright;
-#endif
 }
 
 static inline void
