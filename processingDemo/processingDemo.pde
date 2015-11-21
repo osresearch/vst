@@ -7,10 +7,10 @@ float origX = random(1024);
 float origY = random(1024);
 float destX = random(1024);
 float destY = random(1024);
-int oVx = 2;
-int oVy = 2;
-float dVx = 1;
-float dVy = 1;
+float oVx = random(10);
+float oVy = random(10);
+float dVx = random(20);
+float dVy = random(20);
 byte[] bytes = new byte[3+3*2*10];
 int byte_count = 0;
 
@@ -35,10 +35,14 @@ void draw() {
   background(255);
   stroke(110);
   strokeWeight(5);
-  for (int i = 0; i < 400; i+= 40) { 
-    line(origX + i, origY + i, destX + i, destY);
-    add_point(1, (int) origX + i, (int) origY + i);
-    add_point(i == 360 ? 3 : 2, (int) destX + i, (int) destY);
+  float dist = 10;
+  for (int i = 0; i < 10; i++, dist += 20) { 
+    line(
+       origX + dist, origY + dist,
+       destX + dist, destY);
+       
+    add_point(1, (int) origX + dist, (int) origY + dist);
+    add_point(i == 0 ? 3 : 2, (int) destX + dist, (int) destY);
   }
 
   //add_point(1, (int) origX, (int) origY);
@@ -84,10 +88,10 @@ void bounce2() {
   }
 }
 
-void add_point(int bright, int x, int y)
+void add_point(int bright, float xf, float yf)
 {
-  x += 512;
-  y += 512;
+  int x = 512 + (int) xf;
+  int y = 512 + (int) yf;
   int cmd = (bright & 3) << 22 | (x & 2047) << 11 | (y & 2047) << 0;
   bytes[byte_count++] = (byte)((cmd >> 16) & 0xFF);
   bytes[byte_count++] = (byte)((cmd >>  8) & 0xFF);
