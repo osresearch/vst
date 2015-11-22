@@ -19,14 +19,16 @@
  *
  */
 #include <SPI.h>
+#include <Time.h>
 #include "DMAChannel.h"
+#include "asteroids_font.h"
 
-#define CONFIG_VECTREX
-//#define CONFIG_VECTORSCOPE
+//#define CONFIG_VECTREX
+#define CONFIG_VECTORSCOPE
 
 
 // Sometimes the X and Y need to be flipped and/or swapped
-#define FLIP_X
+#undef FLIP_X
 #undef FLIP_Y
 #define SWAP_XY
 
@@ -242,97 +244,156 @@ spi_dma_setup()
 }
 
 
+void
+rx_append(
+	unsigned bright,
+	int x,
+	int y
+)
+{
+	uint16_t * pt = points[rx_points++];
+	pt[0] = x | bright;
+	pt[1] = y;
+}
+
 
 void
-setup()
+moveto(int x, int y)
 {
-	Serial.begin(9600);
-	pinMode(DELAY_PIN, OUTPUT);
-	pinMode(DEBUG_PIN, OUTPUT);
-	pinMode(IO_PIN, OUTPUT);
+	rx_append(MOVETO, x, y);
+}
 
-	digitalWrite(DELAY_PIN, 0);
-	digitalWrite(DEBUG_PIN, 0);
-	digitalWrite(IO_PIN, 0);
 
-	digitalWrite(SS2_PIN, 0);
+void
+lineto(int x, int y)
+{
+	rx_append(LINETO, x, y);
+}
 
-	pinMode(SS_PIN, OUTPUT);
-	pinMode(SS2_PIN, OUTPUT);
-	pinMode(SDI, OUTPUT);
-	pinMode(SCK, OUTPUT);
 
-#if 1
+void
+brightto(int x, int y)
+{
+	rx_append(BRIGHTTO, x, y);
+}
+
+
+void
+draw_character(
+	char c,
+	int x,
+	int y,
+	int size
+)
+{
+	const uint8_t * const pts = asteroids_font[c - ' '].points;
+	int next_moveto = 1;
+
+	for(int i = 0 ; i < 8 ; i++)
+	{
+		uint8_t delta = pts[i];
+		if (delta == FONT_LAST)
+			break;
+		if (delta == FONT_UP)
+		{
+			next_moveto = 1;
+			continue;
+		}
+
+		unsigned dx = ((delta >> 4) & 0xF) * size;
+		unsigned dy = ((delta >> 0) & 0xF) * size;
+
+		if (next_moveto)
+			moveto(x + dx, y + dy);
+		else
+			lineto(x + dx, y + dy);
+
+		next_moveto = 0;
+	}
+}
+
+
+void
+draw_string(
+	const char * s,
+	int x,
+	int y,
+	int size
+)
+{
+	while(*s)
+	{
+		char c = *s++;
+		if ('a' <= c && c <= 'z')
+			c -= 'a' - 'A';
+
+		draw_character(c, x, y, size);
+		x += size * 12;
+	}
+}
+
+static void
+draw_test_pattern()
+{
 	// fill in some points for test and calibration
-	int i = 0;
-	points[i][0] = 0 | MOVETO;
-	points[i++][1] = 0;
-	points[i][0] = 512 | LINETO;
-	points[i++][1] = 0;
-	points[i][0] = 512 | LINETO;
-	points[i++][1] = 512;
-	points[i][0] = 0 | LINETO;
-	points[i++][1] = 512;
-	points[i][0] = 0 | LINETO;
-	points[i++][1] = 0;
+	moveto(0,0);
+	lineto(512,0);
+	lineto(512,512);
+	lineto(0,512);
+	lineto(0,0);
 
-	points[i][0] = 2047 | MOVETO;
-	points[i++][1] = 0;
-	points[i][0] = (2047 - 128) | LINETO;
-	points[i++][1] = 0;
-	points[i][0] = (2047 - 0) | LINETO;
-	points[i++][1] = 128;
-	points[i][0] = 2047 | LINETO;
-	points[i++][1] = 0;
+	// triangle
+	moveto(2047, 0);
+	lineto(2047-128, 0);
+	lineto(2047-0, 128);
+	lineto(2047,0);
 
-	points[i][0] = 2047 | MOVETO;
-	points[i++][1] = 2047;
-	points[i][0] = (2047 - 128) | LINETO;
-	points[i++][1] = 2047;
-	points[i][0] = (2047 - 128) | LINETO;
-	points[i++][1] = (2047 - 128);
-	points[i][0] = (2047 - 0) | LINETO;
-	points[i++][1] = (2047 - 128);
-	points[i][0] = 2047 | LINETO;
-	points[i++][1] = 2047;
+	// cross
+	moveto(2047,2047);
+	lineto(2047-128,2047);
+	lineto(2047-128,2047-128);
+	lineto(2047,2047-128);
+	lineto(2047,2047);
 
-	points[i][0] = 0 | MOVETO;
-	points[i++][1] = 2047;
-	points[i][0] = 128 | LINETO;
-	points[i++][1] = 2047;
-	points[i][0] = 128 | LINETO;
-	points[i++][1] = (2047 - 128);
-	points[i][0] = 0 | LINETO;
-	points[i++][1] = (2047 - 128);
-	points[i][0] = 0 | LINETO;
-	points[i++][1] = 2047;
+	moveto(0,2047);
+	lineto(128,2047);
+	lineto(0,2047-128);
+	lineto(128, 2047-128);
+	lineto(0,2047);
 
-	points[i][0] = 1024 | MOVETO;
-	points[i++][1] = 512;
-	points[i][0] = 1024 | BRIGHTTO;
-	points[i++][1] = 1024+512;
+	moveto(1024,512);
+	brightto(1024,1024+512);
 
-	points[i][0] = 512 | MOVETO;
-	points[i++][1] = 1024;
-	points[i][0] = (1024+512) | BRIGHTTO;
-	points[i++][1] = 1024;
+	moveto(512,1024);
+	brightto(1024+512,1024);
 
-	for(unsigned j = 0 ; j <= 512 ; j += 64)
+	// draw the sunburst pattern in the corner
+	moveto(0,0);
+	for(unsigned j = 0, i=0 ; j <= 512 ; j += 64, i++)
 	{
-		points[i][0] = 0 | MOVETO;
-		points[i++][1] = 0;
-		points[i][0] = 512 | LINETO;
-		points[i++][1] = j;
+		if (i & 1)
+		{
+			moveto(512,j);
+			lineto(0,0);
+		} else {
+			lineto(512,j);
+		}
 	}
 
-	for(unsigned j = 0 ; j < 512 ; j += 64)
+	moveto(0,0);
+	for(unsigned j = 0, i=0 ; j < 512 ; j += 64, i++)
 	{
-		points[i][0] = 0 | MOVETO;
-		points[i++][1] = 0;
-		points[i][0] = j | LINETO;
-		points[i++][1] = 512;
+		if (i & 1)
+		{
+			moveto(j,512);
+			lineto(0,0);
+		} else {
+			lineto(j,512);
+		}
 	}
 
+	draw_string("http://v.st/", 1024 - 512, 1024 + 512, 8);
+#if 0
 	// and a small v.st logo
 	const int vx = 1024+256;
 	const int vy = 1024+512;
@@ -373,8 +434,44 @@ setup()
 	MOVE_LINE(tx, ty, 4, 12);
 	DRAW_LINE(tx, ty, 4, 0);
 
-	num_points = i;
 #endif
+}
+
+
+static time_t
+teensy3_rtc()
+{
+	return Teensy3Clock.get();
+}
+
+
+
+void
+setup()
+{
+	// set the Time library to use Teensy 3.0's RTC to keep time
+	setSyncProvider(teensy3_rtc);
+
+	Serial.begin(9600);
+	pinMode(DELAY_PIN, OUTPUT);
+	pinMode(DEBUG_PIN, OUTPUT);
+	pinMode(IO_PIN, OUTPUT);
+
+	digitalWrite(DELAY_PIN, 0);
+	digitalWrite(DEBUG_PIN, 0);
+	digitalWrite(IO_PIN, 0);
+
+	digitalWrite(SS2_PIN, 0);
+
+	pinMode(SS_PIN, OUTPUT);
+	pinMode(SS2_PIN, OUTPUT);
+	pinMode(SDI, OUTPUT);
+	pinMode(SCK, OUTPUT);
+
+	rx_points = 0;
+	draw_test_pattern();
+	num_points = rx_points;
+	rx_points = 0;
 	
 
 #ifdef SLOW_SPI
@@ -470,6 +567,11 @@ brightness(
 	uint16_t bright
 )
 {
+	static unsigned last_bright;
+	if (last_bright == bright)
+		return;
+	last_bright = bright;
+
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
 	mpc4921_write(1, 2048);
 	mpc4921_write(0, bright);
@@ -477,7 +579,7 @@ brightness(
 }
 
 static inline void
-_lineto(
+_draw_lineto(
 	int x1,
 	int y1,
 	const int bright_shift
@@ -556,23 +658,23 @@ _lineto(
 
 
 void
-lineto(
+draw_lineto(
 	int x1,
 	int y1
 )
 {
 	brightness(BRIGHT_NORMAL);
-	_lineto(x1, y1, NORMAL_SHIFT);
+	_draw_lineto(x1, y1, NORMAL_SHIFT);
 }
 
 void
-lineto_bright(
+draw_bright(
 	int x1,
 	int y1
 )
 {
 	brightness(BRIGHT_BRIGHT);
-	_lineto(x1, y1, BRIGHT_SHIFT);
+	_draw_lineto(x1, y1, BRIGHT_SHIFT);
 }
 
 
@@ -592,7 +694,7 @@ dwell(
 
 
 void
-lineto_off(
+draw_moveto(
 	int x1,
 	int y1
 )
@@ -606,7 +708,7 @@ lineto_off(
 	// hold the current position for a few clocks
 	// with the beam off
 	dwell(OFF_DWELL1);
-	_lineto(x1, y1, OFF_SHIFT);
+	_draw_lineto(x1, y1, OFF_SHIFT);
 	dwell(OFF_DWELL2);
 #endif // OFF_JUMP
 }
@@ -744,12 +846,12 @@ loop()
 #endif
 
 		if (intensity == 1)
-			lineto_off(x,y);
+			draw_moveto(x,y);
 		else
 		if (intensity == 2)
-			lineto(x, y);
+			draw_lineto(x, y);
 		else
-			lineto_bright(x, y);
+			draw_bright(x, y);
 	}
 
 	// go to the center of the screen, turn the beam off
