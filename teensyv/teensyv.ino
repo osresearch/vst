@@ -26,6 +26,10 @@
 //#define CONFIG_VECTREX
 #define CONFIG_VECTORSCOPE
 
+// If you just want a scope clock,
+// solder a 32.768 KHz crystal to the teensy and provide a backup
+// battery on the BAT pin.
+#define CONFIG_CLOCK
 
 // Sometimes the X and Y need to be flipped and/or swapped
 #undef FLIP_X
@@ -672,6 +676,44 @@ draw_moveto(
 }
 
 
+void
+_circle(
+	int cx,
+	int cy,
+	int r,
+	int octant
+)
+{
+	int x = r;
+	int y = 0;
+	int decision_over2 = 1 - x;
+
+	//moveto(cx+x, cy+y);
+
+	while(y <= x)
+	{
+		switch(octant)
+		{
+		case 0: lineto(cx+x, cy+y); break;
+		case 1: lineto(cx+x, cy-y); break;
+		case 2: lineto(cx+y, cy+x); break;
+		default: break;
+		}
+
+		y++;
+		if (decision_over2 <= 0)
+		{
+			decision_over2 += 2 * y + 1;
+		} else
+		{
+			x--;
+			decision_over2 += 2 * (y - x) + 1;
+		}
+	}
+}
+
+
+
 uint8_t
 read_blocking()
 {
@@ -799,6 +841,7 @@ loop()
 		draw_string("unable to sync", 0, 1024, 8);
 	} else {
 		char t[32];
+		const int y_off = hour() * 60 + minute();
 		{
 		int h = hour();
 		int m = minute();
@@ -812,7 +855,7 @@ loop()
 		t[6] = '0' + s / 10;
 		t[7] = '0' + s % 10;
 		t[8] = '\0';
-		draw_string(t, 16, 1024, 21);
+		draw_string(t, 16, 256 + y_off, 21);
 		}
 
 		{
@@ -830,10 +873,45 @@ loop()
 		t[8] = '0' + d / 10;
 		t[9] = '0' + d % 10;
 		t[10] = '\0';
-		draw_string(t, 64, 1024-256, 16);
+		draw_string(t, 64, 0 + y_off, 16);
 		}
 	}
-	draw_string("http://v.st/", 512, 0, 8);
+
+	static int px = 0;
+	static int py = 0;
+	static int vx = 2;
+	static int vy = 3;
+
+	draw_string("http://v.st/", px, py, 8);
+	px += vx;
+	py += vy;
+	if (px < 0)
+	{
+		px = 0;
+		vx = -vx;
+	} else
+	if (px > 2048 - 8*12*12)
+	{
+		px = 2048 - 8*12*12;
+		vx = -vx;
+	}
+
+	if (py < 0)
+	{
+		py = 0;
+		vy = -vy;
+	} else
+	if (py > 2048 - 8*16)
+	{
+		py = 2048 - 8*16;
+		vy = -vy;
+	}
+
+	
+
+	//_circle(1024, 1024, 300, 0);
+	//_circle(1024, 1024, 300, 1);
+	//_circle(1024, 1024, 300, 2);
 	num_points = rx_points;
 	rx_points = 0;
 
