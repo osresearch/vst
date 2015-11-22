@@ -392,49 +392,7 @@ draw_test_pattern()
 		}
 	}
 
-	draw_string("http://v.st/", 1024 - 512, 1024 + 512, 8);
-#if 0
-	// and a small v.st logo
-	const int vx = 1024+256;
-	const int vy = 1024+512;
-	const int doty = vy-12*8;
-	const int dotx = vx;
-	const int sy = vy-24*8;
-	const int sx = vx;
-	const int ty = vy-36*8;
-	const int tx = vx;
-
-#define MOVE_LINE(x,y, dx, dy) do { \
-	points[i][0] = (x + dy*8) | MOVETO; \
-	points[i++][1] = (y - dx*8); \
-} while(0)
-#define DRAW_LINE(x,y, dx,dy) do { \
-	points[i][0] = (x + dy*8) | LINETO; \
-	points[i++][1] = (y - dx*8); \
-} while(0)
-
-	MOVE_LINE(vx, vy, 0, 12);
-	DRAW_LINE(vx, vy, 4, 0);
-	DRAW_LINE(vx, vy, 8, 12);
-
-	MOVE_LINE(dotx, doty, 3, 0);
-	DRAW_LINE(dotx, doty, 4, 0);
-
-	MOVE_LINE(sx, sy, 0, 2);
-	DRAW_LINE(sx, sy, 2, 0);
-	DRAW_LINE(sx, sy, 8, 0);
-	DRAW_LINE(sx, sy, 8, 5);
-	DRAW_LINE(sx, sy, 0, 7);
-	DRAW_LINE(sx, sy, 0, 12);
-	DRAW_LINE(sx, sy, 6, 12);
-	DRAW_LINE(sx, sy, 8, 10);
-
-	MOVE_LINE(tx, ty, 0, 12);
-	DRAW_LINE(tx, ty, 8, 12);
-	MOVE_LINE(tx, ty, 4, 12);
-	DRAW_LINE(tx, ty, 4, 0);
-
-#endif
+	draw_string("http://v.st/", 1024 - 512, 1024 + 600, 8);
 }
 
 
@@ -803,6 +761,7 @@ loop()
 	static uint32_t frame_micros;
 	uint32_t now;
 
+#ifndef CONFIG_CLOCK
 	while(1)
 	{
 		now = micros();
@@ -820,6 +779,65 @@ loop()
 		if (Serial.available() && read_data() == 1)
 			break;
 	}
+#else
+	while(1)
+	{
+		now = micros();
+
+		// make sure we flush the partial buffer
+		// once the last one has completed
+		if (spi_dma_tx_complete())
+		{
+			if (now - frame_micros > 10000u)
+				break;
+			spi_dma_tx();
+		}
+	}
+
+	rx_points = 0;
+	if (timeStatus()!= timeSet) {
+		draw_string("unable to sync", 0, 1024, 8);
+	} else {
+		char t[32];
+		{
+		int h = hour();
+		int m = minute();
+		int s = second();
+		t[0] = '0' + h / 10;
+		t[1] = '0' + h % 10;
+		t[2] = ':';
+		t[3] = '0' + m / 10;
+		t[4] = '0' + m % 10;
+		t[5] = ':';
+		t[6] = '0' + s / 10;
+		t[7] = '0' + s % 10;
+		t[8] = '\0';
+		draw_string(t, 16, 1024, 21);
+		}
+
+		{
+		int y = year();
+		int m = month();
+		int d = day();
+		t[0] = '0' + (y / 1000) % 10;
+		t[1] = '0' + (y / 100) % 10;
+		t[2] = '0' + (y / 10) % 10;
+		t[3] = '0' + (y / 1) % 10;
+		t[4] = '/';
+		t[5] = '0' + m / 10;
+		t[6] = '0' + m % 10;
+		t[7] = '/';
+		t[8] = '0' + d / 10;
+		t[9] = '0' + d % 10;
+		t[10] = '\0';
+		draw_string(t, 64, 1024-256, 16);
+		}
+	}
+	draw_string("http://v.st/", 512, 0, 8);
+	num_points = rx_points;
+	rx_points = 0;
+
+#endif
 
 	// if there are any DMAs currently in transit, wait for them
 	// to complete.
