@@ -830,7 +830,7 @@ loop()
 		// once the last one has completed
 		if (spi_dma_tx_complete())
 		{
-			if (now - frame_micros > 10000u)
+			if (now - frame_micros > 25000u)
 				break;
 			spi_dma_tx();
 		}

@@ -5,6 +5,89 @@
  *
  */
 
+const int cx = 1024;
+const int cy = 1024;
+
+void
+draw_hand(
+	float a,
+	int r,
+	int hw
+)
+{
+	const float sh = sin(a * M_PI/180);
+	const float ch = cos(a * M_PI/180);
+
+	if (hw == 0)
+	{
+		moveto(cx + r*sh/2,cy + r*ch/2);
+		lineto(cx + r*sh, cy + r*ch);
+	} else {
+		//moveto(cx-hw*sh, cy-hw*ch);
+		moveto(cx-hw*ch, cy+hw*sh);
+		lineto(cx+r*sh, cy+r*ch);
+		lineto(cx+hw*ch, cy-hw*sh);
+		//lineto(cx-hw*sh, cy-hw*ch);
+	}
+}
+
+void
+scopeclock_analog()
+{
+	if (timeStatus()!= timeSet) {
+		draw_string("time invalid: unable to sync", 0, 0, 8);
+	}
+
+	const int rh = 950;
+	const int r1 = 1000;
+	const int r2 = 1023;
+
+	for(int t = 0 ; t < 360 ; t += 15)
+	{
+		const float st = sin(t*M_PI/180);
+		const float ct = cos(t*M_PI/180);
+
+		if (t == 0)
+		{
+			// twelve o'clock
+			moveto(1024 + st*rh - 20, 1024 + ct*rh);
+			lineto(1024 + st*r2 - 20 , 1024 + ct*r2);
+			lineto(1024 + st*r2 + 20 , 1024 + ct*r2);
+			lineto(1024 + st*rh + 20, 1024 + ct*rh);
+			lineto(1024 + st*rh - 20, 1024 + ct*rh);
+		} else
+		if (t % 30 == 0)
+		{
+			// normal hour
+			moveto(1024 + st*rh, 1024 + ct*rh);
+			lineto(1024 + st*r2, 1024 + ct*r2);
+		} else {
+			// normal second/minute marker
+			moveto(1024 + st*r1, 1024 + ct*r1);
+			lineto(1024 + st*r2, 1024 + ct*r2);
+		}
+	}
+
+	const int h = hour();
+	const int m = minute();
+	const int s = second();
+	static int last_sec;
+	static int last_millis;
+
+	// track the millis of the rollover to the next second
+	if (last_sec != s)
+	{
+		last_millis = millis();
+		last_sec = s;
+	}
+	const int ms = (millis() - last_millis) % 1000;
+
+	draw_hand((h*60 + m) * 15 / 60.0, rh/2, 50);
+	draw_hand((m*60 + s) * 6 / 60.0, rh, 50);
+	draw_hand((s*1000 + ms) * 6 / 1000.0, rh, 0);
+}
+
+
 void
 scopeclock_digital()
 {
@@ -91,7 +174,11 @@ void
 scopeclock()
 {
 	rx_points = 0;
-	scopeclock_digital();
+	if (0)
+		scopeclock_digital();
+	else
+		scopeclock_analog();
+
 	num_points = rx_points;
 	rx_points = 0;
 }
