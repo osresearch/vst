@@ -20,7 +20,7 @@ draw_hand(
 
 	if (hw == 0)
 	{
-		moveto(cx + r*sh*3/4,cy + r*ch*3/4);
+		moveto(cx + r*sh*5/8,cy + r*ch*5/8);
 		lineto(cx + r*sh, cy + r*ch);
 	} else {
 		//moveto(cx-hw*sh, cy-hw*ch);
@@ -108,19 +108,24 @@ scopeclock_analog()
 			lineto(cx + st*rh + 20, cy + ct*rh);
 			lineto(cx + st*rh - 20, cy + ct*rh);
 		} else
-		if (t % 30 == 0)
+		if (t % 15 == 0)
 		{
 			// normal hour
-			moveto(cx + st*rh, cy + ct*rh);
-			lineto(cx + st*r2, cy + ct*r2);
+			if (t % 30 == 0)
+			{
+				moveto(cx + st*rh, cy + ct*rh);
+				lineto(cx + st*r2, cy + ct*r2);
+			}
 
 			int h = t / 15;
 			char t[3] = { '0' + h / 10, '0' + h % 10, '\0' };
 			draw_string(t,
 				cx + st*(r1-150) - 12*6,
-				cy + ct*(r1-150) - 2*6,
+				cy + ct*(r1-150) - 5*6,
 				6);
-		} else {
+		} else
+		if (t % 6 == 0)
+		{
 			// normal second/minute marker
 			moveto(cx + st*r1, cy + ct*r1);
 			lineto(cx + st*r2, cy + ct*r2);
