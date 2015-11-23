@@ -20,7 +20,7 @@ draw_hand(
 
 	if (hw == 0)
 	{
-		moveto(cx + r*sh/2,cy + r*ch/2);
+		moveto(cx + r*sh*3/4,cy + r*ch*3/4);
 		lineto(cx + r*sh, cy + r*ch);
 	} else {
 		//moveto(cx-hw*sh, cy-hw*ch);
@@ -31,6 +31,58 @@ draw_hand(
 	}
 }
 
+
+void
+draw_ymd(
+	int year,
+	int m,
+	int d,
+	int x,
+	int y,
+	int size
+)
+{
+	char t[16];
+	t[0] = '0' + (year / 1000) % 10;
+	t[1] = '0' + (year / 100) % 10;
+	t[2] = '0' + (year / 10) % 10;
+	t[3] = '0' + (year / 1) % 10;
+	t[4] = '/';
+	t[5] = '0' + m / 10;
+	t[6] = '0' + m % 10;
+	t[7] = '/';
+	t[8] = '0' + d / 10;
+	t[9] = '0' + d % 10;
+	t[10] = '\0';
+	draw_string(t, x, y, size);
+}
+
+
+void
+draw_hms(
+	int h,
+	int m,
+	int s,
+	int x,
+	int y,
+	int size
+)
+{
+	char t[16];
+	t[0] = '0' + h / 10;
+	t[1] = '0' + h % 10;
+	t[2] = ':';
+	t[3] = '0' + m / 10;
+	t[4] = '0' + m % 10;
+	t[5] = ':';
+	t[6] = '0' + s / 10;
+	t[7] = '0' + s % 10;
+	t[8] = '\0';
+
+	draw_string(t, x, y, size);
+}
+
+
 void
 scopeclock_analog()
 {
@@ -38,11 +90,11 @@ scopeclock_analog()
 		draw_string("time invalid: unable to sync", 0, 0, 8);
 	}
 
-	const int rh = 950;
-	const int r1 = 1000;
-	const int r2 = 1023;
+	const int rh = 900;
+	const int r1 = 950;
+	const int r2 = 1000;
 
-	for(int t = 0 ; t < 360 ; t += 15)
+	for(int t = 0 ; t < 360 ; t += 6)
 	{
 		const float st = sin(t*M_PI/180);
 		const float ct = cos(t*M_PI/180);
@@ -50,21 +102,28 @@ scopeclock_analog()
 		if (t == 0)
 		{
 			// twelve o'clock
-			moveto(1024 + st*rh - 20, 1024 + ct*rh);
-			lineto(1024 + st*r2 - 20 , 1024 + ct*r2);
-			lineto(1024 + st*r2 + 20 , 1024 + ct*r2);
-			lineto(1024 + st*rh + 20, 1024 + ct*rh);
-			lineto(1024 + st*rh - 20, 1024 + ct*rh);
+			moveto(cx + st*rh - 20, cy + ct*rh);
+			lineto(cx + st*r2 - 20 , cy + ct*r2);
+			lineto(cx + st*r2 + 20 , cy + ct*r2);
+			lineto(cx + st*rh + 20, cy + ct*rh);
+			lineto(cx + st*rh - 20, cy + ct*rh);
 		} else
 		if (t % 30 == 0)
 		{
 			// normal hour
-			moveto(1024 + st*rh, 1024 + ct*rh);
-			lineto(1024 + st*r2, 1024 + ct*r2);
+			moveto(cx + st*rh, cy + ct*rh);
+			lineto(cx + st*r2, cy + ct*r2);
+
+			int h = t / 15;
+			char t[3] = { '0' + h / 10, '0' + h % 10, '\0' };
+			draw_string(t,
+				cx + st*(r1-150) - 12*6,
+				cy + ct*(r1-150) - 2*6,
+				6);
 		} else {
 			// normal second/minute marker
-			moveto(1024 + st*r1, 1024 + ct*r1);
-			lineto(1024 + st*r2, 1024 + ct*r2);
+			moveto(cx + st*r1, cy + ct*r1);
+			lineto(cx + st*r2, cy + ct*r2);
 		}
 	}
 
@@ -73,6 +132,7 @@ scopeclock_analog()
 	const int s = second();
 	static int last_sec;
 	static int last_millis;
+
 
 	// track the millis of the rollover to the next second
 	if (last_sec != s)
@@ -84,7 +144,14 @@ scopeclock_analog()
 
 	draw_hand((h*60 + m) * 15 / 60.0, rh/2, 50);
 	draw_hand((m*60 + s) * 6 / 60.0, rh, 50);
-	draw_hand((s*1000 + ms) * 6 / 1000.0, rh, 0);
+	draw_hand((s*1000 + ms) * 6 / 1000.0, 1023, 0);
+
+	const int y_off = 768-20 + (h*60 + m) * 512 / (24*60);
+	//const int y_off = 768-20 + (s*1000 + ms) * 512 / (60000);
+
+	draw_ymd(year(), month(), day(), 0, 0, 5);
+	draw_hms(h,m,s, cx - 12*10*4, 700, 10);
+	draw_string(dayStr(weekday()), 1500, 0, 5);
 }
 
 
@@ -99,39 +166,10 @@ scopeclock_digital()
 	char t[32];
 
 	const int y_off = hour() * 60 + minute();
-	{
-		int h = hour();
-		int m = minute();
-		int s = second();
-		t[0] = '0' + h / 10;
-		t[1] = '0' + h % 10;
-		t[2] = ':';
-		t[3] = '0' + m / 10;
-		t[4] = '0' + m % 10;
-		t[5] = ':';
-		t[6] = '0' + s / 10;
-		t[7] = '0' + s % 10;
-		t[8] = '\0';
-		draw_string(t, 16, 256 + y_off, 21);
-	}
 
-	{
-		int y = year();
-		int m = month();
-		int d = day();
-		t[0] = '0' + (y / 1000) % 10;
-		t[1] = '0' + (y / 100) % 10;
-		t[2] = '0' + (y / 10) % 10;
-		t[3] = '0' + (y / 1) % 10;
-		t[4] = '/';
-		t[5] = '0' + m / 10;
-		t[6] = '0' + m % 10;
-		t[7] = '/';
-		t[8] = '0' + d / 10;
-		t[9] = '0' + d % 10;
-		t[10] = '\0';
-		draw_string(t, 64, 0 + y_off, 16);
-	}
+	draw_hms(hour(), minute(), second(), 16, 256+y_off, 21);
+	draw_ymd(year(), month(), day(), 64, 0+y_off, 16);
+
 
 	static int px = 0;
 	static int py = 0;
