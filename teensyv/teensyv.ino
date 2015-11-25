@@ -21,7 +21,14 @@
 #include <SPI.h>
 #include <Time.h>
 #include "DMAChannel.h"
+
+#define CONFIG_FONT_HERSHEY
+
+#ifdef CONFIG_FONT_HERSHEY
+#include "hershey_font.h"
+#else
 #include "asteroids_font.h"
+#endif
 
 //#define CONFIG_VECTREX
 #define CONFIG_VECTORSCOPE
@@ -46,6 +53,8 @@
  *
  * Most of them do not have a Z input, so we move the beam to an extreme
  * during the blanking interval.
+ *
+ * If your vectorscope doesn't have a Z axis, undefine CONFIG_BRIGHTNESS
  */
 #define BRIGHT_SHIFT	0	// larger numbers == dimmer lines
 #define NORMAL_SHIFT	1	// no z-axis, so we must have a difference
@@ -56,6 +65,7 @@
 #undef FULL_SCALE		// only use -1.25 to 1.25V range
 
 // most vector scopes don't have brightness control, but set it anyway
+#undef CONFIG_BRIGHTNESS
 #define BRIGHT_OFF	2048	// "0 volts", relative to reference
 #define BRIGHT_NORMAL	3700	// fairly bright
 #define BRIGHT_BRIGHT	4000	// super bright
@@ -85,6 +95,7 @@
 #define REST_X		2048	// wait in the center of the screen
 #define REST_Y		2048
 
+#define CONFIG_BRIGHTNESS	// use the brightness DAC
 #define BRIGHT_OFF	2048	// "0 volts", relative to reference
 #define BRIGHT_NORMAL	3400	// fairly bright
 #define BRIGHT_BRIGHT	4095	// super bright
@@ -282,7 +293,7 @@ brightto(int x, int y)
 }
 
 
-void
+int
 draw_character(
 	char c,
 	int x,
@@ -290,6 +301,33 @@ draw_character(
 	int size
 )
 {
+#ifdef CONFIG_FONT_HERSHEY
+	const hershey_char_t * const f = &hershey_simplex[c - ' '];
+	int next_moveto = 1;
+
+	for(int i = 0 ; i < f->count ; i++)
+	{
+		unsigned dx = f->points[2*i+0];
+		unsigned dy = f->points[2*i+1];
+		if (dx == -1)
+		{
+			next_moveto = 1;
+			continue;
+		}
+
+		dx = (dx * size) * 3 / 4;
+		dy = (dy * size) * 3 / 4;
+
+		if (next_moveto)
+			moveto(x + dx, y + dy);
+		else
+			lineto(x + dx, y + dy);
+
+		next_moveto = 0;
+	}
+
+	return (f->width * size) * 3 / 4;
+#else
 	const uint8_t * const pts = asteroids_font[c - ' '].points;
 	int next_moveto = 1;
 
@@ -314,6 +352,9 @@ draw_character(
 
 		next_moveto = 0;
 	}
+
+	return 12 * size;
+#endif
 }
 
 
@@ -331,8 +372,7 @@ draw_string(
 		if ('a' <= c && c <= 'z')
 			c -= 'a' - 'A';
 
-		draw_character(c, x, y, size);
-		x += size * 12;
+		x += draw_character(c, x, y, size);
 	}
 }
 
@@ -431,6 +471,7 @@ setup()
 	pinMode(SCK, OUTPUT);
 
 	rx_points = 0;
+
 	draw_test_pattern();
 	num_points = rx_points;
 	rx_points = 0;
@@ -529,15 +570,18 @@ brightness(
 	uint16_t bright
 )
 {
+#ifdef CONFIG_BRIGHTNESS
 	static unsigned last_bright;
 	if (last_bright == bright)
 		return;
 	last_bright = bright;
 
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
-	mpc4921_write(1, 2048);
 	mpc4921_write(0, bright);
 	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
+#else
+	(void) bright;
+#endif
 }
 
 static inline void
@@ -830,7 +874,7 @@ loop()
 		// once the last one has completed
 		if (spi_dma_tx_complete())
 		{
-			if (now - frame_micros > 20000u)
+			if (now - frame_micros > 25000u)
 				break;
 			spi_dma_tx();
 		}
@@ -848,6 +892,11 @@ loop()
 
 	// flag that we have started an output frame
 	digitalWriteFast(DEBUG_PIN, 1);
+
+	// force a reference voltage write on every cycle
+	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
+	mpc4921_write(1, 2048);
+	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
 
 	for(unsigned n = 0 ; n < num_points ; n++)
 	{

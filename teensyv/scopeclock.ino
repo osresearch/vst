@@ -20,7 +20,7 @@ draw_hand(
 
 	if (hw == 0)
 	{
-		moveto(cx + r*sh*5/8,cy + r*ch*5/8);
+		moveto(cx + r*sh/4,cy + r*ch/4);
 		lineto(cx + r*sh, cy + r*ch);
 	} else {
 		//moveto(cx-hw*sh, cy-hw*ch);
@@ -47,10 +47,10 @@ draw_ymd(
 	t[1] = '0' + (year / 100) % 10;
 	t[2] = '0' + (year / 10) % 10;
 	t[3] = '0' + (year / 1) % 10;
-	t[4] = '/';
+	t[4] = '-';
 	t[5] = '0' + m / 10;
 	t[6] = '0' + m % 10;
-	t[7] = '/';
+	t[7] = '-';
 	t[8] = '0' + d / 10;
 	t[9] = '0' + d % 10;
 	t[10] = '\0';
@@ -122,7 +122,7 @@ scopeclock_analog()
 			draw_string(t,
 				cx + st*(r1-150) - 12*6,
 				cy + ct*(r1-150) - 5*6,
-				6);
+				5);
 		} else
 		if (t % 6 == 0)
 		{
@@ -154,9 +154,9 @@ scopeclock_analog()
 	const int y_off = 768-20 + (h*60 + m) * 512 / (24*60);
 	//const int y_off = 768-20 + (s*1000 + ms) * 512 / (60000);
 
-	draw_ymd(year(), month(), day(), 0, 0, 5);
-	draw_hms(h,m,s, cx - 12*10*4, 700, 10);
-	draw_string(dayStr(weekday()), 1500, 0, 5);
+	draw_hms(h,m,s, cx - 650, cy + 150, 12);
+	draw_string(dayStr(weekday()), cx - 250, cy - 250, 4);
+	draw_ymd(year(), month(), day(), cx - 300, cy - 400, 4);
 }
 
 
@@ -214,13 +214,27 @@ scopeclock_digital()
 
 
 void
+alphabet_test()
+{
+	int size = 13; // hershey
+	//int size = 17; // asteroids
+	draw_string("abcdefghij", 0, 1800, size);
+	draw_string("klmnopqrst", 0, 1400, size);
+	draw_string("uvwxyz0123", 0, 1000, size);
+	draw_string("456789:-!$", 0,  600, size);
+	draw_string("%^&*()/=+{", 0,  200, size);
+}
+
+void
 scopeclock()
 {
 	rx_points = 0;
+
 	if (0)
 		scopeclock_digital();
 	else
 		scopeclock_analog();
+	//alphabet_test();
 
 	num_points = rx_points;
 	rx_points = 0;
