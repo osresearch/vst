@@ -1,0 +1,401 @@
+diff --git a/src/emu/emuopts.cpp b/src/emu/emuopts.cpp
+index d891aae..fd23c62 100644
+--- a/src/emu/emuopts.cpp
++++ b/src/emu/emuopts.cpp
+@@ -116,6 +116,10 @@ const options_entry emu_options::s_option_entries[] =
+ 	{ OPTION_BEAM_WIDTH_MAX,                             "1.0",       OPTION_FLOAT,      "set vector beam width maximum" },
+ 	{ OPTION_BEAM_INTENSITY_WEIGHT,                      "0",         OPTION_FLOAT,      "set vector beam intensity weight " },
+ 	{ OPTION_FLICKER,                                    "0",         OPTION_FLOAT,      "set vector flicker effect" },
++	{ OPTION_VECTOR_SERIAL,                              "",          OPTION_STRING,      "set vector serial device" },
++	{ OPTION_VECTOR_SCALE,                               "1.0",       OPTION_FLOAT,      "set vector serial output scale" },
++	{ OPTION_VECTOR_ROTATE,                              "0",         OPTION_INTEGER,    "set vector serial rotation (0,1,2,3)" },
++	{ OPTION_VECTOR_BRIGHT,                              "200",       OPTION_INTEGER,    "set vector threshold for bright lines (0-255)" },
+ 
+ 	// sound options
+ 	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE SOUND OPTIONS" },
+diff --git a/src/emu/emuopts.h b/src/emu/emuopts.h
+index 9e8485b..5c7b3f6 100644
+--- a/src/emu/emuopts.h
++++ b/src/emu/emuopts.h
+@@ -123,6 +123,10 @@ enum
+ #define OPTION_BEAM_WIDTH_MAX       "beam_width_max"
+ #define OPTION_BEAM_INTENSITY_WEIGHT   "beam_intensity_weight"
+ #define OPTION_FLICKER              "flicker"
++#define OPTION_VECTOR_SERIAL        "vector_serial"
++#define OPTION_VECTOR_ROTATE        "vector_rotate"
++#define OPTION_VECTOR_BRIGHT        "vector_bright"
++#define OPTION_VECTOR_SCALE         "vector_scale"
+ 
+ // core sound options
+ #define OPTION_SAMPLERATE           "samplerate"
+@@ -297,6 +301,10 @@ public:
+ 	float beam_width_max() const { return float_value(OPTION_BEAM_WIDTH_MAX); }
+ 	float beam_intensity_weight() const { return float_value(OPTION_BEAM_INTENSITY_WEIGHT); }
+ 	float flicker() const { return float_value(OPTION_FLICKER); }
++	float vector_scale() const { return float_value(OPTION_VECTOR_SCALE); }
++	const char * vector_serial() const { return value(OPTION_VECTOR_SERIAL); }
++	int vector_rotate() const { return int_value(OPTION_VECTOR_ROTATE); }
++	int vector_bright() const { return int_value(OPTION_VECTOR_BRIGHT); }
+ 
+ 	// core sound options
+ 	int sample_rate() const { return int_value(OPTION_SAMPLERATE); }
+diff --git a/src/emu/video/vector.cpp b/src/emu/video/vector.cpp
+index 8cc5aaf..3736e83 100644
+--- a/src/emu/video/vector.cpp
++++ b/src/emu/video/vector.cpp
+@@ -34,6 +34,17 @@
+ #include "rendutil.h"
+ #include "vector.h"
+ 
++// Serial port related includes
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <termios.h>
++#include <errno.h>
++
++#include <inttypes.h>
++#include <sys/time.h>
++ 
+ 
+ #define FLT_EPSILON 1E-5
+ 
+@@ -152,6 +163,158 @@ float vector_device::m_beam_width_max = 0.0f;
+ float vector_device::m_beam_intensity_weight = 0.0f;
+ int vector_device::m_vector_index;
+ 
++int
++serial_open(
++        const char * const dev
++)
++{
++        const int fd = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY, 0666);
++        if (fd < 0)
++                return -1;
++
++        // Disable modem control signals
++        struct termios attr;
++        tcgetattr(fd, &attr);
++        attr.c_cflag |= CLOCAL | CREAD;
++        attr.c_oflag &= ~OPOST;
++        tcsetattr(fd, TCSANOW, &attr);
++
++        return fd;
++}
++
++void vector_device::serial_draw_point(
++	unsigned x,
++	unsigned y,
++	int intensity
++)
++{
++	unsigned bright;
++	if (intensity > m_serial_bright)
++		bright = 2;
++	else
++	if (intensity > 0)
++		bright = 1;
++	else
++		bright = 0;
++
++	if (m_serial_rotate == 1)
++	{
++		// +90
++		unsigned tmp = x;
++		x = -y;
++		y = tmp;
++	} else
++	if (m_serial_rotate == 2)
++	{
++		// +180
++		x = -x;
++		y = -y;
++	} else
++	if (m_serial_rotate == 3)
++	{
++		// -90
++		unsigned t = x;
++		x = y;
++		y = -t;
++	}
++
++	uint32_t cmd = 0
++		| (bright << 22)
++		| (x & 0x7FFF) << 11
++		| (y & 0x7FFF) <<  0
++		;
++
++	m_serial_buf[m_serial_offset++] = cmd >> 16;
++	m_serial_buf[m_serial_offset++] = cmd >>  8;
++	m_serial_buf[m_serial_offset++] = cmd >>  0;
++
++	// todo: check for overflow;
++	// should always have enough points
++}
++
++
++void vector_device::serial_draw_line(
++	float xf0,
++	float yf0,
++	float xf1,
++	float yf1,
++	int intensity
++)
++{
++	if (m_serial_fd < 0)
++		return;
++
++	static int last_x;
++	static int last_y;
++
++	const int x0 = xf0 * 2048;
++	const int y0 = yf0 * 2048;
++	const int x1 = xf1 * 2048;
++	const int y1 = yf1 * 2048;
++
++	if (last_x != x0 && last_y != y0)
++	{
++		// not a continuous segment; add a transit command
++		serial_draw_point(x0, y0, 0);
++	}
++
++	// transit to the new point
++	serial_draw_point(x1, y1, intensity);
++
++	last_x = x1;
++	last_y = y1;
++}
++
++
++void vector_device::serial_reset()
++{
++	m_serial_offset = 0;
++	m_serial_buf[m_serial_offset++] = 0;
++	m_serial_buf[m_serial_offset++] = 0;
++	m_serial_buf[m_serial_offset++] = 0;
++	m_serial_buf[m_serial_offset++] = 0;
++}
++
++
++void vector_device::serial_send()
++{
++	if (m_serial_fd < 0)
++		return;
++
++	// add the "done" command to the message
++	m_serial_buf[m_serial_offset++] = 1;
++	m_serial_buf[m_serial_offset++] = 1;
++	m_serial_buf[m_serial_offset++] = 1;
++
++	size_t offset = 0;
++
++	if (m_serial_drop_frame)
++	{
++		// we skipped a frame, don't skip the next one
++		m_serial_drop_frame = 0;
++	} else
++	while (offset < m_serial_offset)
++	{
++		ssize_t rc = write(m_serial_fd, m_serial_buf + offset, m_serial_offset - offset);
++		if (rc <= 0)
++		{
++			m_serial_drop_frame = 1;
++			if (errno == EAGAIN)
++				continue;
++			perror(m_serial);
++			close(m_serial_fd);
++			m_serial_fd = -1;
++			break;
++		}
++
++		offset += rc;
++	}
++
++	serial_reset();
++}
++
++
++
+ void vector_device::device_start()
+ {
+ 	/* Grab the settings for this session */
+@@ -164,6 +327,31 @@ void vector_device::device_start()
+ 
+ 	/* allocate memory for tables */
+ 	m_vector_list = auto_alloc_array_clear(machine(), point, MAX_POINTS);
++
++	/* Setup the serial output of the XY coords if configured */
++	m_serial = machine().options().vector_serial();
++	m_serial_scale = machine().options().vector_scale();
++	m_serial_rotate = machine().options().vector_rotate();
++	m_serial_bright = machine().options().vector_bright();
++	m_serial_drop_frame = 0;
++
++	// allocate enough buffer space, although we should never use this much
++	m_serial_buf = (uint8_t*) calloc(MAX_POINTS+2, 3);
++	if (!m_serial_buf)
++	{
++		// todo: how to signal an error?
++	}
++
++	serial_reset();
++
++	if (!m_serial || strcmp(m_serial,"") == 0)
++	{
++		fprintf(stderr, "no serial vector display configured\n");
++		m_serial_fd = -1;
++	} else {
++		m_serial_fd = serial_open(m_serial);
++		fprintf(stderr, "serial dev='%s' fd=%d\n", m_serial, m_serial_fd);
++	}
+ }
+ 
+ void vector_device::set_flicker(float newval)
+@@ -367,6 +555,11 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+ 					beam_width,
+ 					(curpoint->intensity << 24) | (curpoint->col & 0xffffff),
+ 					flags);
++
++				serial_draw_line(
++					coords.x0, coords.y0,
++					coords.x1, coords.y1,
++					curpoint->intensity);
+ 			}
+ 
+ 			lastx = curpoint->x;
+@@ -376,5 +569,7 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+ 		curpoint++;
+ 	}
+ 
++	serial_send();
++
+ 	return 0;
+ }
+diff --git a/src/emu/video/vector.h b/src/emu/video/vector.h
+index d021824..25a6a80 100644
+--- a/src/emu/video/vector.h
++++ b/src/emu/video/vector.h
+@@ -70,6 +70,37 @@ private:
+ 	int m_min_intensity;
+ 	int m_max_intensity;
+ 
++	// Serial output option for driving vector display hardware
++	const char * m_serial;
++	int m_serial_fd;
++	float m_serial_scale;
++	int m_serial_rotate;
++	int m_serial_bright;
++	int m_serial_drop_frame;
++	uint8_t * m_serial_buf;
++	size_t m_serial_offset;
++
++	void serial_reset();
++
++	void
++	serial_draw_point(
++		unsigned x,
++		unsigned y,
++		int intensity
++	);
++
++	void
++	serial_draw_line(
++		float x0,
++		float y0,
++		float x1,
++		float y1,
++		int intensity
++	);
++
++	void
++	serial_send();
++
+ 	float normalized_sigmoid(float n, float k);
+ };
+ 
+diff --git a/src/mame/mame.lst b/src/mame/mame.lst
+index b4737de..d4942eb 100644
+--- a/src/mame/mame.lst
++++ b/src/mame/mame.lst
+@@ -9,5 +9,6 @@
+ 
+ ******************************************************************************/
+ 
+-#../../../../../src/mame/arcade.lst
+-#../../../../../src/mame/mess.lst
++//#../../../../../src/mame/arcade.lst
++//#../../../../../src/mame/mess.lst
++#../../../../../src/mame/vector.lst
+diff --git a/src/mame/vector.lst b/src/mame/vector.lst
+new file mode 100644
+index 0000000..cfe4b2b
+--- /dev/null
++++ b/src/mame/vector.lst
+@@ -0,0 +1,66 @@
++// license:BSD-3-Clause
++// copyright-holders:Aaron Giles
++/******************************************************************************
++
++    arcade.lst
++
++    List of all enabled drivers in the system. This file is parsed by
++    makelist.exe, sorted, and output as C code describing the drivers.
++
++******************************************************************************/
++
++
++// Atari vector games
++llander         // 0345xx           no copyright notice
++llander1        // 0345xx           no copyright notice
++llandert        // (test)           no copyright notice
++asteroid        // 035127-035145    (c) 1979
++asteroid2       // 035127-035145    (c) 1979
++asteroid1       // 035127-035145    no copyright notice
++asteroidb       // (bootleg)
++aerolitos       // Rodmar Elec. bootleg
++asterock        // Sidam bootleg    (c) 1979
++asterockv       // Videotron bootleg(c) 1979
++hyperspc        // Rumiano bootleg  (c) 1979
++meteorts        // VCC bootleg      (c) 1979
++meteorho        // Hoei? bootleg    (c) 1980
++astdelux        // 0351xx           (c) 1980
++astdelux2       // 0351xx           (c) 1980
++astdelux1       // 0351xx           (c) 1980
++bzone           // 0364xx           (c) 1980
++bzonea          // 0364xx           (c) 1980
++bzonec          // 0364xx           (c) 1980
++bradley         //     ??           (c) 1980
++redbaron        // 036995-037007    (c) 1980
++redbarona       // 036995-037007    (c) 1980
++tempest         // 136002           (c) 1980
++tempest3        // 136002           (c) 1980
++tempest2        // 136002           (c) 1980
++tempest1        // 136002           (c) 1980
++tempest1r       // 136002           (c) 1980
++temptube        // (hack)
++spacduel        // 136006           (c) 1980
++spacduel1       // 136006           (c) 1980
++spacduel0       // 136006           (c) 1980
++gravitar        // 136010           (c) 1982
++gravitar2       // 136010           (c) 1982
++gravitar1       // 136010           (c) 1982
++lunarbat        // (proto)          (c) 1982
++lunarba1        // (proto)          (c) 1982
++quantum         // 136016           (c) 1982        // made by Gencomp
++quantum1        // 136016           (c) 1982        // made by Gencomp
++quantump        // 136016           (c) 1982        // made by Gencomp
++bwidow          // 136017           (c) 1982
++bwidowp         // (proto)          (c) 1982
++starwars        // 136021           (c) 1983
++starwars1       // 136021           (c) 1983
++starwarso       // 136021           (c) 1983
++tomcatsw        // (proto)          (c) 1983
++mhavoc          // 136025           (c) 1983
++mhavoc2         // 136025           (c) 1983
++mhavocp         // 136025           (c) 1983
++mhavocrv        // (hack)
++alphaone        // (proto)          (c) 1983
++alphaonea       // (proto)          (c) 1983
++esb             // 136031           (c) 1985
++tomcat          // (proto)          (c) 1985
