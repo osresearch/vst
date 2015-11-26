@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+# Take a raw binary file and generate a csv for plotting with gnuplot
+use warnings;
+use strict;
+
+undef $/;
+
+my $bytes = <>;
+
+# find the first frame
+for(my $i = 0 ; $i < length $bytes ; $i++)
+{
+	my $c0 = ord(substr($bytes, $i+0, 1));
+	if ($c0 == 0)
+	{
+		next;
+	}
+
+	my $c1 = ord(substr($bytes, $i+1, 1));
+	my $c2 = ord(substr($bytes, $i+2, 1));
+	$i += 2;
+
+	my $cmd = ($c0 << 16) | ($c1 << 8) | ($c2 << 0);
+	my $bright = ($cmd >> 22) & 3;
+	my $x = ($cmd >> 11) & 0x7FF;
+	my $y = ($cmd >>  0) & 0x7FF;
+
+	# skip if we hit a new line
+	print "\n" if $bright == 1;
+
+	# print if we hit a new frame
+	print "-----\n" if $bright == 0;
+
+	printf "%d %d %d\n", $x, $y, $bright;
+}
+
+__END__

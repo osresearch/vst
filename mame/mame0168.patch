@@ -40,7 +40,7 @@ index 9e8485b..5c7b3f6 100644
  	// core sound options
  	int sample_rate() const { return int_value(OPTION_SAMPLERATE); }
 diff --git a/src/emu/video/vector.cpp b/src/emu/video/vector.cpp
-index 8cc5aaf..3736e83 100644
+index 8cc5aaf..a98a3ab 100644
 --- a/src/emu/video/vector.cpp
 +++ b/src/emu/video/vector.cpp
 @@ -34,6 +34,17 @@
@@ -61,7 +61,7 @@ index 8cc5aaf..3736e83 100644
  
  #define FLT_EPSILON 1E-5
  
-@@ -152,6 +163,158 @@ float vector_device::m_beam_width_max = 0.0f;
+@@ -152,6 +163,159 @@ float vector_device::m_beam_width_max = 0.0f;
  float vector_device::m_beam_intensity_weight = 0.0f;
  int vector_device::m_vector_index;
  
@@ -92,12 +92,12 @@ index 8cc5aaf..3736e83 100644
 +{
 +	unsigned bright;
 +	if (intensity > m_serial_bright)
-+		bright = 2;
++		bright = 3;
 +	else
 +	if (intensity > 0)
-+		bright = 1;
++		bright = 2;
 +	else
-+		bright = 0;
++		bright = 1;
 +
 +	if (m_serial_rotate == 1)
 +	{
@@ -154,9 +154,10 @@ index 8cc5aaf..3736e83 100644
 +	const int x1 = xf1 * 2048;
 +	const int y1 = yf1 * 2048;
 +
-+	if (last_x != x0 && last_y != y0)
++	// if this is not a continuous segment,
++	// we must add a transit command
++	if (last_x != x0 || last_y != y0)
 +	{
-+		// not a continuous segment; add a transit command
 +		serial_draw_point(x0, y0, 0);
 +	}
 +
@@ -220,7 +221,7 @@ index 8cc5aaf..3736e83 100644
  void vector_device::device_start()
  {
  	/* Grab the settings for this session */
-@@ -164,6 +327,31 @@ void vector_device::device_start()
+@@ -164,6 +328,31 @@ void vector_device::device_start()
  
  	/* allocate memory for tables */
  	m_vector_list = auto_alloc_array_clear(machine(), point, MAX_POINTS);
@@ -252,7 +253,7 @@ index 8cc5aaf..3736e83 100644
  }
  
  void vector_device::set_flicker(float newval)
-@@ -367,6 +555,11 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+@@ -367,6 +556,11 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
  					beam_width,
  					(curpoint->intensity << 24) | (curpoint->col & 0xffffff),
  					flags);
@@ -264,7 +265,7 @@ index 8cc5aaf..3736e83 100644
  			}
  
  			lastx = curpoint->x;
-@@ -376,5 +569,7 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+@@ -376,5 +570,7 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
  		curpoint++;
  	}
  
