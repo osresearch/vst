@@ -30,8 +30,8 @@
 #include "asteroids_font.h"
 #endif
 
-//#define CONFIG_VECTREX
-#define CONFIG_VECTORSCOPE
+#define CONFIG_VECTREX
+//#define CONFIG_VECTORSCOPE
 
 // If you just want a scope clock,
 // solder a 32.768 KHz crystal to the teensy and provide a backup
@@ -39,9 +39,9 @@
 #define CONFIG_CLOCK
 
 // Sometimes the X and Y need to be flipped and/or swapped
-#undef FLIP_X
-#undef FLIP_Y
-#define SWAP_XY
+#define FLIP_X
+#define FLIP_Y
+#undef SWAP_XY
 
 
 #if defined(CONFIG_VECTORSCOPE)
@@ -83,14 +83,14 @@
  * determined and might not be right for all monitors.
  */
 
-#define BRIGHT_SHIFT	3	// larger numbers == dimmer lines
-#define NORMAL_SHIFT	3	// but we can control with Z axis
+#define BRIGHT_SHIFT	2	// larger numbers == dimmer lines
+#define NORMAL_SHIFT	2	// but we can control with Z axis
 #undef OFF_JUMP			// don't wait, just go!
 
 #define OFF_SHIFT	5	// smaller numbers == slower transits
-#define OFF_DWELL0	14	// time to sit beam on before starting a transit
+#define OFF_DWELL0	10	// time to sit beam on before starting a transit
 #define OFF_DWELL1	0	// time to sit before starting a transit
-#define OFF_DWELL2	19	// time to sit after finishing a transit
+#define OFF_DWELL2	10	// time to sit after finishing a transit
 
 #define REST_X		2048	// wait in the center of the screen
 #define REST_Y		2048
@@ -576,6 +576,7 @@ brightness(
 		return;
 	last_bright = bright;
 
+	dwell(OFF_DWELL0);
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
 	mpc4921_write(0, bright);
 	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
@@ -865,6 +866,15 @@ loop()
 		if (Serial.available() && read_data() == 1)
 			break;
 	}
+
+	// if there are any DMAs currently in transit, wait for them
+	// to complete.
+	while (!spi_dma_tx_complete())
+		;
+	spi_dma_tx();
+	while (!spi_dma_tx_complete())
+		;
+
 #else
 	while(1)
 	{
@@ -880,13 +890,16 @@ loop()
 		}
 	}
 
-	scopeclock();
-#endif
-
 	// if there are any DMAs currently in transit, wait for them
 	// to complete.
 	while (!spi_dma_tx_complete())
 		;
+	spi_dma_tx();
+	while (!spi_dma_tx_complete())
+		;
+
+	scopeclock();
+#endif
 
 	frame_micros = now;
 
