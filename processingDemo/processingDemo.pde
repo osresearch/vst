@@ -26,20 +26,25 @@ void setup() {
   myPort = new Serial(this, portName, 9600); 
 
   size(512, 512);
+  frame.setResizable(true);
 
   frameRate(25);
 }
 
 void draw() {
-  qix_draw();
+  //qix_draw();
+  swarm_draw();
   send_points();
 }
 
 
 void add_point(int bright, float xf, float yf)
 {
+  // Vector axis is (0,0) in the bottom left corner;
+  // this needs to flip the Y axis.
   int x = (int)(xf * 2048 / width);
-  int y = (int)(yf * 2048 / height);
+  int y = 2047 - (int)(yf * 2048 / height);
+
   int cmd = (bright & 3) << 22 | (x & 2047) << 11 | (y & 2047) << 0;
   bytes[byte_count++] = (byte)((cmd >> 16) & 0xFF);
   bytes[byte_count++] = (byte)((cmd >>  8) & 0xFF);
