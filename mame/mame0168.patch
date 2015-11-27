@@ -1,9 +1,3 @@
-commit 55639680c406d19ed2bb950b066e2fde297bcfe3
-Author: Trammell Hudson <hudson@osresearch.net>
-Date:   Fri Nov 27 15:20:59 2015 -0500
-
-    Additions to write vectors to a v.st controller board for display on real vector monitors
-
 diff --git a/scripts/target/mame/vector.lua b/scripts/target/mame/vector.lua
 new file mode 100644
 index 0000000..c2c71a0
@@ -444,7 +438,7 @@ index 9e8485b..5c7b3f6 100644
  	// core sound options
  	int sample_rate() const { return int_value(OPTION_SAMPLERATE); }
 diff --git a/src/emu/video/vector.cpp b/src/emu/video/vector.cpp
-index 8cc5aaf..bbc43a7 100644
+index 8cc5aaf..4fe214a 100644
 --- a/src/emu/video/vector.cpp
 +++ b/src/emu/video/vector.cpp
 @@ -34,6 +34,17 @@
@@ -465,7 +459,7 @@ index 8cc5aaf..bbc43a7 100644
  
  #define FLT_EPSILON 1E-5
  
-@@ -152,6 +163,171 @@ float vector_device::m_beam_width_max = 0.0f;
+@@ -152,6 +163,179 @@ float vector_device::m_beam_width_max = 0.0f;
  float vector_device::m_beam_intensity_weight = 0.0f;
  int vector_device::m_vector_index;
  
@@ -565,10 +559,10 @@ index 8cc5aaf..bbc43a7 100644
 +	static int last_x;
 +	static int last_y;
 +
-+	const int x0 = xf0 * 2048;
-+	const int y0 = yf0 * 2048;
-+	const int x1 = xf1 * 2048;
-+	const int y1 = yf1 * 2048;
++	const int x0 = (xf0 * 2048 - 1024) * m_serial_scale + 1024;
++	const int y0 = (yf0 * 2048 - 1024) * m_serial_scale + 1024;
++	const int x1 = (xf1 * 2048 - 1024) * m_serial_scale + 1024;
++	const int y1 = (yf1 * 2048 - 1024) * m_serial_scale + 1024;
 +
 +	// if this is not a continuous segment,
 +	// we must add a transit command
@@ -607,7 +601,15 @@ index 8cc5aaf..bbc43a7 100644
 +
 +	size_t offset = 0;
 +
-+	if (m_serial_drop_frame)
++	printf("%d vectors%s\n",
++		m_serial_offset/3,
++		m_serial_drop_frame ? " drop" : ""
++	);
++
++	static unsigned frame_count;
++	const unsigned skip_frames = 2;
++
++	if (frame_count++ % skip_frames != 0 || m_serial_drop_frame)
 +	{
 +		// we skipped a frame, don't skip the next one
 +		m_serial_drop_frame = 0;
@@ -637,7 +639,7 @@ index 8cc5aaf..bbc43a7 100644
  void vector_device::device_start()
  {
  	/* Grab the settings for this session */
-@@ -164,6 +340,31 @@ void vector_device::device_start()
+@@ -164,6 +348,31 @@ void vector_device::device_start()
  
  	/* allocate memory for tables */
  	m_vector_list = auto_alloc_array_clear(machine(), point, MAX_POINTS);
@@ -669,7 +671,7 @@ index 8cc5aaf..bbc43a7 100644
  }
  
  void vector_device::set_flicker(float newval)
-@@ -367,6 +568,11 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+@@ -367,6 +576,11 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
  					beam_width,
  					(curpoint->intensity << 24) | (curpoint->col & 0xffffff),
  					flags);
@@ -681,7 +683,7 @@ index 8cc5aaf..bbc43a7 100644
  			}
  
  			lastx = curpoint->x;
-@@ -376,5 +582,7 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
+@@ -376,5 +590,7 @@ UINT32 vector_device::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
  		curpoint++;
  	}
  
