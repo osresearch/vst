@@ -36,12 +36,16 @@
 // If you just want a scope clock,
 // solder a 32.768 KHz crystal to the teensy and provide a backup
 // battery on the BAT pin.
-#define CONFIG_CLOCK
+#undef CONFIG_CLOCK
 
 // Sometimes the X and Y need to be flipped and/or swapped
 #define FLIP_X
 #define FLIP_Y
 #undef SWAP_XY
+
+// How often should a frame be drawn if we haven't receivded any serial
+// data from MAME (in ms).
+#define REFRESH_RATE 20000u
 
 
 #if defined(CONFIG_VECTORSCOPE)
@@ -328,6 +332,10 @@ draw_character(
 
 	return (f->width * size) * 3 / 4;
 #else
+	// Asteroids font only has upper case
+	if ('a' <= c && c <= 'z')
+		c -= 'a' - 'A';
+
 	const uint8_t * const pts = asteroids_font[c - ' '].points;
 	int next_moveto = 1;
 
@@ -369,9 +377,6 @@ draw_string(
 	while(*s)
 	{
 		char c = *s++;
-		if ('a' <= c && c <= 'z')
-			c -= 'a' - 'A';
-
 		x += draw_character(c, x, y, size);
 	}
 }
@@ -436,7 +441,30 @@ draw_test_pattern()
 		}
 	}
 
-	draw_string("http://v.st/", 1024 - 512, 1024 + 600, 8);
+	draw_string("http://v.st/", 1024 - 512, 1024 + 600, 6);
+
+	draw_string("Firmware built", 1100, 900, 2);
+	draw_string(__DATE__ " " __TIME__, 1100, 850, 2);
+
+	int y = 1400;
+	const int line_size = 70;
+
+	//draw_string("Options:", 1100, y, 3); y -= line_size;
+#ifdef CONFIG_VECTREX
+	draw_string("VECTREX", 1100, y, 3); y -= line_size;
+#else
+	draw_string("Vectoscope", 1100, y, 3); y -= line_size;
+#endif
+#ifdef FLIP_X
+	draw_string("FLIP_X", 1100, y, 3); y -= line_size;
+#endif
+#ifdef FLIP_Y
+	draw_string("FLIP_Y", 1100, y, 3); y -= line_size;
+#endif
+#ifdef SWAP_XY
+	draw_string("SWAP_XY", 1100, y, 3); y -= line_size;
+#endif
+
 }
 
 
@@ -857,7 +885,7 @@ loop()
 		// once the last one has completed
 		if (spi_dma_tx_complete())
 		{
-			if (rx_points == 0 && now - frame_micros > 25000u)
+			if (rx_points == 0 && now - frame_micros > REFRESH_RATE)
 				break;
 			spi_dma_tx();
 		}
@@ -867,41 +895,35 @@ loop()
 			break;
 	}
 
+	frame_micros = now;
+
 	// if there are any DMAs currently in transit, wait for them
 	// to complete.
 	while (!spi_dma_tx_complete())
 		;
+
+	// now start any last buffered ones and wait for those
+	// to complete.
 	spi_dma_tx();
 	while (!spi_dma_tx_complete())
 		;
 
 #else
-	while(1)
-	{
-		now = micros();
-
-		// make sure we flush the partial buffer
-		// once the last one has completed
-		if (spi_dma_tx_complete())
-		{
-			if (now - frame_micros > 25000u)
-				break;
-			spi_dma_tx();
-		}
-	}
-
 	// if there are any DMAs currently in transit, wait for them
 	// to complete.
 	while (!spi_dma_tx_complete())
 		;
+
+	// now start any last buffered ones and wait for those
+	// to complete.
 	spi_dma_tx();
 	while (!spi_dma_tx_complete())
 		;
 
+	// redraw the clock image
 	scopeclock();
 #endif
 
-	frame_micros = now;
 
 	// flag that we have started an output frame
 	digitalWriteFast(DEBUG_PIN, 1);
