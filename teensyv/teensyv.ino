@@ -89,7 +89,7 @@
 
 #define BRIGHT_SHIFT	2	// larger numbers == dimmer lines
 #define NORMAL_SHIFT	2	// but we can control with Z axis
-#undef OFF_JUMP			// don't wait, just go!
+#undef OFF_JUMP			// too slow, so we can't jump the beam
 
 #define OFF_SHIFT	5	// smaller numbers == slower transits
 #define OFF_DWELL0	10	// time to sit beam on before starting a transit
@@ -441,10 +441,11 @@ draw_test_pattern()
 		}
 	}
 
-	draw_string("http://v.st/", 1024 - 512, 1024 + 600, 6);
+	draw_string("http://v.st/", 1024 - 450, 1024 + 600, 6);
 
-	draw_string("Firmware built", 1100, 900, 2);
-	draw_string(__DATE__ " " __TIME__, 1100, 850, 2);
+	draw_string("Firmware built", 1100, 900, 3);
+	draw_string(__DATE__, 1100, 830, 3);
+	draw_string(__TIME__, 1100, 760, 3);
 
 	int y = 1400;
 	const int line_size = 70;
@@ -463,6 +464,9 @@ draw_test_pattern()
 #endif
 #ifdef SWAP_XY
 	draw_string("SWAP_XY", 1100, y, 3); y -= line_size;
+#endif
+#ifdef FULL_SCALE
+	draw_string("Fullscale", 1100, y, 3); y -= line_size;
 #endif
 
 }
