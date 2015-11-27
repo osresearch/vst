@@ -21,7 +21,7 @@ draw_hand(
 	if (hw == 0)
 	{
 		moveto(cx + r*sh/4,cy + r*ch/4);
-		lineto(cx + r*sh, cy + r*ch);
+		brightto(cx + r*sh, cy + r*ch);
 	} else {
 		//moveto(cx-hw*sh, cy-hw*ch);
 		moveto(cx-hw*ch, cy+hw*sh);
