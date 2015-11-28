@@ -27,7 +27,7 @@ final float net_width = 10;
 final float y_offset = 400;
 final float scale = 20;
 final float G = 9.81;
-final float decay = 0.8;
+final float decay = 0.9;
 
 void setup() {
 	vector_setup();
