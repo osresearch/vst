@@ -92,7 +92,7 @@ class Particle
 		add_point(1, x, y);
 		add_point(bright ? 3 : 2, x - vx, y - vy);
 
-		stroke(bright ? 0 : 110);
+		stroke(bright ? 255 : 120);
 		line(x, y, x - vx, y - vy);
 	}
 };
@@ -100,6 +100,8 @@ class Particle
 final int num_bees = 50;
 Particle wasp;
 Particle[] bees;
+boolean wasp_follows_mouse = false;
+
 
 void swarm_draw() {
   if (wasp == null)
@@ -112,14 +114,28 @@ void swarm_draw() {
 		bees[i] = new Particle();
   }
 
-  background(255);
-  strokeWeight(1);
+  background(0);
+  strokeWeight(10);
+  
+  
+  if (mousePressed)
+     wasp_follows_mouse = !wasp_follows_mouse;
 
-  // update the wasp
-  wasp.wasp_move();
+  // update the wasp with the mouse
+  if (wasp_follows_mouse)
+  {
+    wasp.vx = mouseX - wasp.x;
+    wasp.vy = mouseY - wasp.y;
+    wasp.x = mouseX;
+    wasp.y = mouseY;
+  } else {
+    wasp.wasp_move();
+  }
+  
   wasp.draw(true);
 
   // update the bees
+  strokeWeight(5);
   for(Particle bee : bees)
   {
 	bee.bee_move(wasp.x, wasp.y);
