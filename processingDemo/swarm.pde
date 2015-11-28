@@ -87,10 +87,6 @@ class Particle
 
 	void draw(boolean bright)
 	{
-		// don't draw if either piece is offscreen
-		if (offscreen(x,y) || offscreen(x - vx, y - vy))
-			return;
-
 		vector_line(bright, x, y, x - vx, y - vy);
 	}
 };

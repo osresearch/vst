@@ -43,6 +43,13 @@ vector_line(
 	stroke(bright ? 255 : 120);
 	line(x0, y0, x1, y1);
 
+	// should compute point of crossing the boundary
+	if (x0 < 0 || x0 > width
+	||  x1 < 0 || x1 > width
+	||  y0 < 0 || y0 > height
+	||  y1 < 0 || y1 > height)
+		return;
+
 	vector_point(1, x0, y0);
 	vector_point(bright ? 3 : 2, x1, y1);
 }
