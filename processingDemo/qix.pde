@@ -15,23 +15,12 @@ float vy1 = random(10)+4;
 int head = 0;
 
 void qix_draw() {
-  background(255);
-  stroke(110);
+  background(0);
   strokeWeight(5);
 
   for(int i = 0 ; i < segments ; i++)
   {
-    line(x0[i], y0[i], x1[i], y1[i]);
-
-    // optimize slightly -- go from end of one segment to the other
-    if (i % 2 == 0)
-    {
-	    add_point(1, x0[i], y0[i]);
-	    add_point(i == head ? 3 : 2, x1[i], y1[i]);
-    } else {
-	    add_point(1, x1[i], y1[i]);
-	    add_point(i == head ? 3 : 2, x0[i], y0[i]);
-    }
+    	vector_line(i == head, x0[i], y0[i], x1[i], y1[i]);
   }
 
   // update the current point

@@ -43,8 +43,10 @@ class Particle
 
 		// adjust the accelerations up to the maximum
 		// add some random noise to ensure that they don't bunch
-		vx = limit(vx + (dx * max_a) / dist, -max_v, max_v) + random(-1,1);
-		vy = limit(vy + (dy * max_a) / dist, -max_v, max_v) + random(-1,1);
+		float dvx = (dx * max_a) / dist;
+		float dvy = (dy * max_a) / dist;
+		vx = limit(vx + dvx, -max_v, max_v) + random(-1,1);
+		vy = limit(vy + dvy, -max_v, max_v) + random(-1,1);
 
 		x += vx;
 		y += vy;
@@ -89,11 +91,7 @@ class Particle
 		if (offscreen(x,y) || offscreen(x - vx, y - vy))
 			return;
 
-		add_point(1, x, y);
-		add_point(bright ? 3 : 2, x - vx, y - vy);
-
-		stroke(bright ? 255 : 120);
-		line(x, y, x - vx, y - vy);
+		vector_line(bright, x, y, x - vx, y - vy);
 	}
 };
 
