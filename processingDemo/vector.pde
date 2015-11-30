@@ -31,6 +31,16 @@ vector_setup()
 }
 
 
+boolean
+vector_offscreen(
+	float x,
+	float y
+)
+{
+	return (x < 0 || x >= width || y < 0 || y >= height);
+}
+
+
 void
 vector_line(
 	boolean bright,
@@ -43,12 +53,30 @@ vector_line(
 	stroke(bright ? 255 : 120);
 	line(x0, y0, x1, y1);
 
-	// should compute point of crossing the boundary
-	if (x0 < 0 || x0 > width
-	||  x1 < 0 || x1 > width
-	||  y0 < 0 || y0 > height
-	||  y1 < 0 || y1 > height)
+	// there are five possibilities:
+	// x0,y0 and x1,y1 are in the screen.
+	// x0,y0 is off screen, and x1,y1 is on screen
+	// x0,y0 is on screen, and x1,y1 is off screen
+	// both are off screen (and cross the display)
+	// both are off screen (and nothing to see)
+
+/*
+	// if both x0,x1 or y0,y1 lie off screen on the same side,
+	// there are no intersections.
+	if ((x0 < 0 && x1 < 0)
+	||  (x0 >= width && x1 >= width)
+	||  (y0 < 0 && y1 < 0)
+	||  (y0 >= height && y1 >= height))
 		return;
+*/
+
+	// should compute point of crossing the boundary
+	if (vector_offscreen(x0,y0)
+	||  vector_offscreen(x1,y1))
+	{
+		//
+		return;
+	}
 
 	vector_point(1, x0, y0);
 	vector_point(bright ? 3 : 2, x1, y1);
