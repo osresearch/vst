@@ -71,8 +71,8 @@
 // most vector scopes don't have brightness control, but set it anyway
 #undef CONFIG_BRIGHTNESS
 #define BRIGHT_OFF	2048	// "0 volts", relative to reference
-#define BRIGHT_NORMAL	3700	// fairly bright
-#define BRIGHT_BRIGHT	4000	// super bright
+#define BRIGHT_NORMAL	3800	// fairly bright
+#define BRIGHT_BRIGHT	4095	// super bright
 
 
 #elif defined(CONFIG_VECTREX)
@@ -101,7 +101,7 @@
 
 #define CONFIG_BRIGHTNESS	// use the brightness DAC
 #define BRIGHT_OFF	2048	// "0 volts", relative to reference
-#define BRIGHT_NORMAL	3400	// fairly bright
+#define BRIGHT_NORMAL	3200	// fairly bright
 #define BRIGHT_BRIGHT	4095	// super bright
 
 #define FULL_SCALE		// use the full -2.5 to 2.5V range
