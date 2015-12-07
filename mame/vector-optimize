@@ -1,0 +1,135 @@
+#!/usr/bin/perl
+# Sort the vectors to see if there is a better arrangement
+use warnings;
+use strict;
+
+my @lines;
+my $points = [];
+
+while(<>)
+{
+	chomp;
+	next if /^$/;
+	my ($x,$y,$bright) = split /\s+/;
+
+	# fix up the last point if this was a transit
+	if ($bright == 1 and @$points)
+	{
+		push @lines, $points;
+		$points = []
+	}
+
+	push @$points, [$x,$y,$bright];
+}
+
+
+sub distance
+{
+	my ($p,$old_x,$old_y) = @_;
+	my ($x,$y,$bright) = @$p;
+	my $dx = $x - $old_x;
+	my $dy = $y - $old_y;
+	return sqrt($dx*$dx + $dy*$dy);
+}
+
+sub print_stats
+{
+	my $old_x = 1024;
+	my $old_y = 1024;
+	my $on_dist = 0;
+	my $off_dist = 0;
+	my $count = 0;
+	my $segs = 0;
+
+	my $lines = shift;
+	for my $l (@$lines)
+	{
+		$segs++;
+		for my $p (@$l)
+		{
+			my ($x,$y,$bright) = @$p;
+			my $dist = distance($p, $old_x, $old_y);
+			if ($bright == 1)
+			{
+				$off_dist += $dist;
+			} else {
+				$on_dist += $dist;
+			}
+
+			$count++;
+			$old_x = $x;
+			$old_y = $y;
+		}
+	}
+
+	printf STDERR "%d segments, %d points: %d off, %d on\n",
+		$segs, $count, $off_dist, $on_dist;
+}
+
+
+sub optimize
+{
+	my $lines = shift;
+	my $old_x = 1024;
+	my $old_y = 1024;
+
+	for(my $j = 0 ; $j < @$lines ; $j++)
+	{
+		my $min = 1e6;
+		my $reverse = 0;
+		my $select = 0;
+
+		# Find the one that starts or ends closest to old_x/old_y
+		for(my $i = $j ; $i < @$lines ; $i++)
+		{
+			my $l = $lines[$i];
+			my $d1 = distance($l->[0], $old_x, $old_y);
+			my $d2 = distance($l->[-1], $old_x, $old_y);
+			if ($d1 < $min)
+			{
+				$min = $d1;
+				$select = $i;
+			}
+			if ($d2 < $min)
+			{
+				$min = $d2;
+				$select = $i;
+				$reverse = 1;
+			}
+
+			#printf "%d: %d dist %d (%d,%d)\n", $i, $select, $min, $d1, $d2;
+		}
+
+		# move the selected one to the head of the list
+		my $l = $lines[$select];
+		if ($reverse)
+		{
+			$l = [reverse(@$l)];
+			$l->[-1][2] = $l->[0][2];
+			$l->[0][2] = 1;
+		}
+
+		if ($select != $j)
+		{
+			my $old_l = $lines[$j];
+			$lines[$select] = $old_l;
+			$lines[$j] = $l;
+		}
+
+		$old_x = $l->[-1][0];
+		$old_y = $l->[-1][1];
+	}
+}
+
+print_stats(\@lines);
+optimize(\@lines);
+print_stats(\@lines);
+
+for my $l (@lines)
+{
+	for my $p (@$l)
+	{
+		printf "%d %d %d\n", @$p;
+	}
+	#print "\n";
+}
