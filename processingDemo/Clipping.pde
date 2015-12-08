@@ -1,6 +1,8 @@
 /** \file
- * Region clipping for 2D rectangles
+ * Region clipping for 2D rectangles using Coehn-Sutherland.
+ * https://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
  */
+
 class Point2
 {
     float x;
@@ -68,6 +70,11 @@ class Clipping
         return code;
     }
 
+    float intercept(float y, float x0, float y0, float x1, float y1)
+    {
+        return x0 + (x1 - x0) * (y - y0) / (y1 - y0);
+    }
+
     // Clip a line segment from p0 to p1 by the
     // rectangular clipping region min/max.
     // p0 and p1 will be modified to be in the region
@@ -98,26 +105,26 @@ class Clipping
             if ((code & TOP) != 0)
             {
                 // point is above the clip rectangle
-                x = p0.x + (p1.x - p0.x) * (max.y - p0.y) / (p1.y - p0.y);
                 y = max.y;
+                x = intercept(y, p0.x, p0.y, p1.x, p1.y);
             } else
             if ((code & BOTTOM) != 0)
             {
                 // point is below the clip rectangle
-                x = p0.x + (p1.x - p0.x) * (min.y - p0.y) / (p1.y - p0.y);
                 y = min.y;
+                x = intercept(y, p0.x, p0.y, p1.x, p1.y);
             } else
             if ((code & RIGHT) != 0)
             {
                 // point is to the right of clip rectangle
-                y = p0.y + (p1.y - p0.y) * (max.x - p0.x) / (p1.x - p0.x);
                 x = max.x;
+                y = intercept(x, p0.y, p0.x, p1.y, p1.x);
             } else
             if ((code & LEFT) != 0)
             {
                 // point is to the left of clip rectangle
-                y = p0.y + (p1.y - p0.y) * (min.x - p0.x) / (p1.x - p0.x);
                 x = min.x;
+                y = intercept(x, p0.y, p0.x, p1.y, p1.x);
             }
 
             // Now we move outside point to intersection point to clip
