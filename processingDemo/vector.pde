@@ -60,10 +60,10 @@ vector_line(
 	Point2 p1 = new Point2(x1,y1);
 
 	stroke(bright ? 255 : 120);
-	if (clip.clip(p0, p1))
-	{
-		line(p0.x, p0.y, p1.x, p1.y);
-	}
+	if (!clip.clip(p0, p1))
+		return;
+
+	line(p0.x, p0.y, p1.x, p1.y);
 
 	// The clip above should ensure that this never happens
 	// but just in case, we will discard those points
@@ -121,7 +121,4 @@ void vector_send()
 	bytes[byte_count++] = 0;
 	bytes[byte_count++] = 0;
 	bytes[byte_count++] = 0;
-
-	line(clip.min.x, clip.min.y, clip.min.x, clip.max.y);
-	line(clip.min.x, clip.min.y, clip.max.x, clip.min.y);
 }
