@@ -136,10 +136,13 @@ void swarm_draw() {
 	bee.draw(false);
   }
 
-  vector_string(String.format("%.2f,%.2f", wasp.x, wasp.y),
-    0,
-    height - 10,
+  float angle = atan2(wasp.vy, wasp.vx);
+
+  vector_string(String.format("%.0f,%.0f", wasp.x, wasp.y),
+    wasp.x,
+    wasp.y,
     20,
+    angle,
     false
   );
 }

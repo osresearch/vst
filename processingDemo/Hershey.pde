@@ -18,7 +18,7 @@ class Hershey
         points = p;
     }
 
-    float draw(float x, float y, float size, boolean bright)
+    float draw(float x, float y, float ss, float cs, boolean bright)
     {
         boolean moveto = true;
         float ox = x;
@@ -35,8 +35,8 @@ class Hershey
                 continue;
             }
 
-             float nx = x + (dx * size) / 16.0;
-            float ny = y - (dy * size) / 16.0;
+            float nx = x + (dx * cs - dy * ss) / 16.0;
+            float ny = y - (dx * ss + dy * cs) / 16.0;
 
             if (!moveto)
                 vector_line(bright, ox, oy, nx, ny);
@@ -47,7 +47,7 @@ class Hershey
             moveto = false;
         }
 
-        return width * size / 16.0;
+        return width / 16.0;
     }
 
 };
@@ -59,12 +59,18 @@ vector_string(
     float x,
     float y,
     float size,
+    float angle,
     boolean bright
 ) {
+    float ss = sin(angle) * size;
+    float cs = cos(angle) * size;
+
     for(char c : s.toCharArray())
     {
         Hershey hc = hershey_font[c - 0x20];
-        x += hc.draw(x, y, size, bright);
+        float width = hc.draw(x, y, ss, cs, bright);
+        x += cs * width;
+        y -= ss * width;
     }
 
     return x;
