@@ -138,6 +138,7 @@ void swarm_draw() {
 
   float angle = atan2(wasp.vy, wasp.vx);
 
+/*
   vector_string(String.format("%.0f,%.0f", wasp.x, wasp.y),
     wasp.x,
     wasp.y,
@@ -145,4 +146,5 @@ void swarm_draw() {
     angle,
     false
   );
+*/
 }

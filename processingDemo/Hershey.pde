@@ -52,6 +52,21 @@ class Hershey
 
 };
 
+float
+vector_string_width(
+    String s
+)
+{
+    float width = 0;
+    for(char c : s.toCharArray())
+    {
+        Hershey hc = hershey_font[c - 0x20];
+	width += hc.width;
+    }
+
+    return width / 16.0;
+}
+
 
 float
 vector_string(
@@ -60,10 +75,18 @@ vector_string(
     float y,
     float size,
     float angle,
+    boolean center,
     boolean bright
 ) {
     float ss = sin(angle) * size;
     float cs = cos(angle) * size;
+
+    if (center)
+    {
+        float total_width = vector_string_width(s);
+        x -= cs * total_width/2;
+        y += ss * total_width/2;
+    }
 
     for(char c : s.toCharArray())
     {

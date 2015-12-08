@@ -18,7 +18,7 @@ void draw() {
 	//hershey[4].draw(50,50, 10, false);
 
 	a += 0.1;
-	vector_string("Hello, world!", 100, 100, 20, a, false);
+	vector_string("Hello, world!", 100, 100, 20, a, true, false);
 
 	vector_send();
 }
