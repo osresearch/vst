@@ -14,5 +14,9 @@ void setup() {
 void draw() {
 	//qix_draw();
 	swarm_draw();
+	//hershey[4].draw(50,50, 10, false);
+
+	vector_string("Hello, world!", 0, 20, 8, false);
+
 	vector_send();
 }

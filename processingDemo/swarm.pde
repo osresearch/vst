@@ -135,5 +135,11 @@ void swarm_draw() {
 	bee.bee_move(wasp.x, wasp.y);
 	bee.draw(false);
   }
-	
+
+  vector_string(String.format("%.2f,%.2f", wasp.x, wasp.y),
+    0,
+    height - 10,
+    20,
+    false
+  );
 }
