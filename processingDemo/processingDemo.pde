@@ -3,7 +3,11 @@
  */
 
 void setup() {
-	vector_setup();
+    vector_setup();
+
+    blendMode(ADD);
+    noFill();
+    stroke(212, 128, 32, 128);
 
 	size(512, 512);
 	surface.setResizable(true);
@@ -14,11 +18,11 @@ void setup() {
 float a = 0;
 void draw() {
 	//qix_draw();
-	swarm_draw();
-	//hershey[4].draw(50,50, 10, false);
+	//swarm_draw();
+	spiral_draw();
 
-	a += 0.1;
-	vector_string("Hello, world!", 100, 100, 20, a, true, false);
+	//a += 0.1;
+	//vector_string("Hello, world!", 100, 100, 20, a, true, false);
 
 	vector_send();
 }
