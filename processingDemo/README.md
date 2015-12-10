@@ -5,4 +5,5 @@ This is a quick demo of how to use the Processing `Serial` class to
 write to the v.st board on the serial port and draw vectors on the
 Vectrex or vectorscope display.
 
-You will probably have to hack at it to select the right serial port.
+The recursive spiral art demo is by Jacob Joaquin and
+demonstrates a class to create replicated shapes.
