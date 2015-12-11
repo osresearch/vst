@@ -1,5 +1,8 @@
 /** \file
- * Record a list of vectors and send them to the vector output.
+ * Recursive shape generator.
+ *
+ * Records a list of vectors and sends them to the
+ * vector output device.
  *
  * (c) 2015 Jacob Joaquin.
  */
