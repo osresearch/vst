@@ -17,6 +17,10 @@ Clipping clip;
 void
 vector_setup()
 {
+	clip = new Clipping(
+		new Point2(0,0),
+		new Point2(width,height)
+	);
 	// finding the right port requires picking it from the list
 	// should look for one that matches "ttyACM*" or "tty.usbmodem*"
 	for(String port : Serial.list())
@@ -30,10 +34,6 @@ vector_setup()
   
 	println("No valid serial ports found?\n");
 
-	clip = new Clipping(
-		new Point2(0,0),
-		new Point2(width,height)
-	);
 }
 
 
