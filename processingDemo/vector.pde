@@ -79,6 +79,17 @@ vector_line(
 
 
 void
+vector_line(
+  boolean bright,
+  PVector p0,
+  PVector p1
+)
+{
+  vector_line(bright, p0.x, p0.y, p1.x, p1.y);
+}
+
+
+void
 vector_point(
 	int bright,
 	float xf,
