@@ -17,7 +17,7 @@ class Camera
   Camera()
   {
     this.r = new float[3][3];
-    this.setup(40, 0,0,0);
+    this.setup(100, 0,0,0);
   }
 
   void
@@ -96,6 +96,8 @@ generate_walk(
   int oy = 0;
   int oz = 0;
 
+  int bound = 10;
+
   walk = new PVector[count];
   for(int i = 0 ; i < count ; i++)
   {
@@ -113,6 +115,9 @@ generate_walk(
 
       if (nx == ox && ny == oy && nz == oz)
         continue;
+      if (nx > bound || nx < -bound) continue;
+      if (ny > bound || ny < -bound) continue;
+      if (nz > bound || nz < -bound) continue;
 
       ox = x;
       oy = y;
@@ -143,7 +148,7 @@ demo3d_draw()
     generate_walk(count);
   }
 
-  c.setup(c.eye_z, roll, pitch, yaw);
+  c.setup(frame_num/10.0 + 10, roll, pitch, yaw);
   roll += 0.01;
   pitch += 0.00;
   yaw += 0.00;
