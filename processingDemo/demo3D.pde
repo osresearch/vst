@@ -81,28 +81,37 @@ class Camera
 
 static Camera c;
 static PVector[] walk;
+static boolean[][][] used;
 
 
-void
+int
 generate_walk(
-  int count
+  int max_count
 )
 {
+  int bound = 10;
+  used = new boolean[bound*2][bound*2][bound*2];
+
   int x = 0;
   int y = 0;
   int z = 0;
 
-  int ox = 0;
-  int oy = 0;
-  int oz = 0;
+  int ox = x;
+  int oy = y;
+  int oz = z;
 
-  int bound = 10;
 
-  walk = new PVector[count];
-  for(int i = 0 ; i < count ; i++)
+  walk = new PVector[max_count];
+  walk[0] = new PVector(x,y,z);
+
+  for(int i = 1 ; i < max_count ; i++)
   {
-    while (true)
+    for(int j = 0 ; j < 20 ; j++)
     {
+      // if we have tried too many times we are done
+      if (j == 19)
+         return i;
+
       int dir = int(random(6));
       int nx = x, ny = y, nz = z;
     
@@ -115,9 +124,13 @@ generate_walk(
 
       if (nx == ox && ny == oy && nz == oz)
         continue;
-      if (nx > bound || nx < -bound) continue;
-      if (ny > bound || ny < -bound) continue;
-      if (nz > bound || nz < -bound) continue;
+
+      if (nx >= bound || nx < -bound) continue;
+      if (ny >= bound || ny < -bound) continue;
+      if (nz >= bound || nz < -bound) continue;
+
+      if (used[nx+bound][ny+bound][nz+bound])
+        continue;
 
       ox = x;
       oy = y;
@@ -128,12 +141,18 @@ generate_walk(
       break;
     }
 
+    used[x+bound][y+bound][z+bound] = true;
     walk[i] = new PVector(x, y, z);
   }
+
+  // if we made it here we have filled the array
+  return max_count;
 }
+
 
 static float roll, pitch = 0.3, yaw = -0.2;
 static int frame_num;
+static int count;
 
 void
 demo3d_draw()
@@ -141,17 +160,18 @@ demo3d_draw()
   background(0);
   strokeWeight(2);
 
-  final int count = 500;
+  final int max_count = 500;
+
   if (c == null)
   {
     c = new Camera();
-    generate_walk(count);
+    count = generate_walk(max_count);
   }
 
-  c.setup(frame_num/10.0 + 10, roll, pitch, yaw);
-  roll += 0.01;
-  pitch += 0.00;
-  yaw += 0.00;
+  c.setup(frame_num/30.0 + 10, roll, pitch, yaw);
+  roll += 0.02;
+  pitch += 0.00051;
+  yaw -= 0.0003;
 
   // draw lines for each of the random walks
   PVector op = null;
@@ -159,7 +179,7 @@ demo3d_draw()
   {
      PVector np = c.project(walk[i]);
      if (op != null && np != null)
-       vector_line(i == frame_num-1, op, np);
+       vector_line(i >= frame_num-2, op, np);
      op = np;
   }
 
@@ -167,7 +187,11 @@ demo3d_draw()
 
   if (frame_num > count)
   {
+    exit();
     frame_num = 0;
-    generate_walk(count);
+    count = generate_walk(max_count);
   }
+
+  if (frame_num % 2 == 0)
+    saveFrame("png/f######.png");
 }
