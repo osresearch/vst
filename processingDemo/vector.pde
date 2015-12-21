@@ -56,6 +56,10 @@ vector_line(
 	float y1
 )
 {
+	// can we detect resize?
+	clip.max.x = width;
+	clip.max.y = height;
+
 	Point2 p0 = new Point2(x0,y0);
 	Point2 p1 = new Point2(x1,y1);
 
