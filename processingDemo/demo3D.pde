@@ -89,14 +89,15 @@ static final int bound = 10;
 
 int
 generate_walk(
-  int max_count
+  int max_count,
+  PVector start
 )
 {
   used = new boolean[bound*2][bound*2][bound*2];
 
-  int x = 0;
-  int y = 0;
-  int z = 0;
+  int x = int(start.x);
+  int y = int(start.y);
+  int z = int(start.z);
 
   int ox = x;
   int oy = y;
@@ -105,6 +106,7 @@ generate_walk(
 
   walk = new PVector[max_count];
   walk[0] = new PVector(x,y,z);
+  used[x+bound][y+bound][z+bound] = true;
 
   for(int i = 1 ; i < max_count ; i++)
   {
@@ -203,15 +205,15 @@ demo3d_draw()
   if (c == null)
   {
     c = new Camera();
-    count = generate_walk(max_count);
+    count = generate_walk(max_count, new PVector(0,0,0));
   }
 
-  c.setup(2*bound, roll, pitch, yaw);
+  c.setup(1.5*bound, roll, pitch, yaw);
   roll += 0.02;
   pitch += 0.00;
   yaw -= 0.0000;
 
-  if (true)
+  if (false)
     draw_box();
 
   // draw lines for each of the random walks
@@ -243,7 +245,7 @@ demo3d_draw()
   {
     //exit();
     frame_num = 0;
-    count = generate_walk(max_count);
+    count = generate_walk(max_count, walk[count-1]);
   }
 
 /*
