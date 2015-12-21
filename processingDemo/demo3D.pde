@@ -153,6 +153,7 @@ generate_walk(
 static float roll, pitch = 0.3, yaw = -0.2;
 static int frame_num;
 static int count;
+static int dir = 1;
 
 void
 demo3d_draw()
@@ -170,22 +171,26 @@ demo3d_draw()
 
   c.setup(frame_num/30.0 + 10, roll, pitch, yaw);
   roll += 0.02;
-  pitch += 0.00051;
+  pitch += 0.0000;
   yaw -= 0.0003;
 
   // draw lines for each of the random walks
   PVector op = null;
-  for(int i = 0 ; i < frame_num ; i++)
+  int start = frame_num > count ? frame_num - count : 0;
+  int end = frame_num < count ? frame_num : count;
+
+  for(int i = start ; i < end ; i++)
   {
      PVector np = c.project(walk[i]);
+     boolean bright = frame_num > count ? i < start+2 : i >= frame_num - 2;
      if (op != null && np != null)
-       vector_line(i >= frame_num-2, op, np);
+       vector_line(bright, op, np);
      op = np;
   }
 
   frame_num++;
 
-  if (frame_num > count)
+  if (frame_num == count * 2)
   {
     exit();
     frame_num = 0;
