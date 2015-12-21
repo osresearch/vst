@@ -85,6 +85,8 @@ vector_line(
   PVector p1
 )
 {
+  if (p0 == null || p1 == null)
+    return;
   vector_line(bright, p0.x, p0.y, p1.x, p1.y);
 }
 
