@@ -34,11 +34,11 @@ class Camera
     float sz = sin(psi);
     float cz = cos(psi);
 
-    this.r[0][0] =  cy * cz;
+    this.r[0][0] =   cy * cz;
     this.r[0][1] = (-cy * sz) + (sx * sy * cz);
     this.r[0][2] = ( sx * sz) + (cx * sy * cz);
 
-    this.r[1][0] =  cx * sz;
+    this.r[1][0] =   cx * sz;
     this.r[1][1] = ( cx * cz) + (sx * sy * sz);
     this.r[1][2] = (-sx * cz) + (cx * sy * sz);
 
@@ -68,11 +68,13 @@ class Camera
     }
 
     // Smaller == wider angle view
-    float zoom = 50;
+    float zoom = 1024;
 
     // Transform to screen coordinate frame,
-    float px = (p[1] * this.eye_z * zoom) / p[2] + width/2;
-    float py = (p[0] * this.eye_z * zoom) / p[2] + height/2;
+    //float px = (p[1] * this.eye_z * zoom) / p[2] + width/2;
+    //float py = (p[0] * this.eye_z * zoom) / p[2] + height/2;
+    float px = (p[1] * zoom) / p[2] + width/2;
+    float py = (p[0] * zoom) / p[2] + height/2;
 
     return new PVector(px,py);
   }
@@ -82,6 +84,7 @@ class Camera
 static Camera c;
 static PVector[] walk;
 static boolean[][][] used;
+static final int bound = 10;
 
 
 int
@@ -89,7 +92,6 @@ generate_walk(
   int max_count
 )
 {
-  int bound = 10;
   used = new boolean[bound*2][bound*2][bound*2];
 
   int x = 0;
@@ -112,7 +114,7 @@ generate_walk(
       if (j == 19)
          return i;
 
-      int dir = int(random(6));
+      int dir = int(random(9));
       int nx = x, ny = y, nz = z;
     
       if (dir == 0) nx -= 1; else
@@ -120,7 +122,13 @@ generate_walk(
       if (dir == 2) ny -= 1; else
       if (dir == 3) ny += 1; else
       if (dir == 4) nz -= 1; else
-      if (dir == 5) nz += 1;
+      if (dir == 5) nz += 1; else
+      if (dir == 6) { if(nx > 0) nx--; else nx++; } else
+      if (dir == 7) { if(ny > 0) ny--; else ny++; } else
+      if (dir == 8) { if(nz > 0) nz--; else nz++; } else
+      {
+        // do nothing
+      }
 
       if (nx == ox && ny == oy && nz == oz)
         continue;
@@ -150,6 +158,35 @@ generate_walk(
 }
 
 
+void
+draw_box()
+{
+  final float b = bound - 0.5;
+
+  PVector v0 = c.project(new PVector(-b,-b,-b));
+  PVector v1 = c.project(new PVector(-b,-b,+b));
+  PVector v2 = c.project(new PVector(-b,+b,-b));
+  PVector v3 = c.project(new PVector(-b,+b,+b));
+  PVector v4 = c.project(new PVector(+b,-b,-b));
+  PVector v5 = c.project(new PVector(+b,-b,+b));
+  PVector v6 = c.project(new PVector(+b,+b,-b));
+  PVector v7 = c.project(new PVector(+b,+b,+b));
+
+  vector_line(false, v0, v1);
+  vector_line(false, v0, v2);
+  vector_line(false, v0, v4);
+  vector_line(false, v1, v3);
+  vector_line(false, v1, v5);
+  vector_line(false, v2, v3);
+  vector_line(false, v2, v6);
+  vector_line(false, v3, v7);
+  vector_line(false, v4, v5);
+  vector_line(false, v4, v6);
+  vector_line(false, v5, v7);
+  vector_line(false, v6, v7);
+}
+
+
 static float roll, pitch = 0.3, yaw = -0.2;
 static int frame_num;
 static int count;
@@ -169,10 +206,13 @@ demo3d_draw()
     count = generate_walk(max_count);
   }
 
-  c.setup(frame_num/30.0 + 10, roll, pitch, yaw);
+  c.setup(2*bound, roll, pitch, yaw);
   roll += 0.02;
-  pitch += 0.0000;
-  yaw -= 0.0003;
+  pitch += 0.00;
+  yaw -= 0.0000;
+
+  if (true)
+    draw_box();
 
   // draw lines for each of the random walks
   PVector op = null;
@@ -182,7 +222,16 @@ demo3d_draw()
   for(int i = start ; i < end ; i++)
   {
      PVector np = c.project(walk[i]);
-     boolean bright = frame_num > count ? i < start+2 : i >= frame_num - 2;
+     boolean bright = false;
+     if (frame_num > count && i < start+2)
+       bright = true;
+     if (frame_num < count && i >= frame_num - 2)
+       bright = true;
+
+     // flash when all the frames have been drawn
+     if (frame_num == count || frame_num == count + 1)
+       bright = true;
+
      if (op != null && np != null)
        vector_line(bright, op, np);
      op = np;
@@ -192,11 +241,13 @@ demo3d_draw()
 
   if (frame_num == count * 2)
   {
-    exit();
+    //exit();
     frame_num = 0;
     count = generate_walk(max_count);
   }
 
+/*
   if (frame_num % 2 == 0)
     saveFrame("png/f######.png");
+*/
 }
