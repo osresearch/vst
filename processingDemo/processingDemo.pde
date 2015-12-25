@@ -19,12 +19,9 @@ float a = 0;
 
 void draw() {
     //qix_draw();
-    //swarm_draw();
+    swarm_draw();
     //spiral_draw();
-    demo3d_draw();
-
-    //a += 0.1;
-    //vector_string("Hello, world!", 100, 100, 20, a, true, false);
+    //demo3d_draw();
 
     vector_send();
 }

@@ -95,6 +95,7 @@ vector_line(
 }
 
 
+
 void
 vector_point(
 	int bright,
@@ -139,3 +140,51 @@ void vector_send()
 	bytes[byte_count++] = 0;
 	bytes[byte_count++] = 0;
 }
+
+/*
+ * 3D vector math operations
+ */
+PVector plus(PVector a, PVector b)
+{
+	return new PVector(a.x + b.x, a.y + b.y, a.z + b.z);
+}
+
+PVector minus(PVector a, PVector b)
+{
+	return new PVector(a.x - b.x, a.y - b.y, a.z - b.z);
+}
+
+PVector times(PVector a, float k)
+{
+	return new PVector(k*a.x, k*a.y, k*a.z);
+}
+
+float mag(PVector a)
+{
+	return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+}
+
+PVector random3(float min, float max)
+{
+	return new PVector(
+		random(min,max),
+		random(min,max),
+		random(min,max)
+	);
+}
+
+PVector limit(PVector x, float min, float max)
+{
+	PVector n = new PVector(x.x, x.y, x.z);
+	if (n.x < min) n.x = min;
+	if (n.y < min) n.y = min;
+	if (n.z < min) n.z = min;
+
+	if (n.x > max) n.x = max;
+	if (n.y > max) n.y = max;
+	if (n.z > max) n.z = max;
+
+	return n;
+}
+
+

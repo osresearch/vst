@@ -2,94 +2,74 @@
  * xswarm like demo
  */
 
-boolean offscreen(float x, float y)
-{
-	if (x < 0 || x >= width || y < 0 || y >= height)
-		return true;
-	return false;
-}
-
-float limit(float x, float min, float max)
-{
-	if (x < min)
-		return min;
-	if (x > max)
-		return max;
-	return x;
-}
-
-
 class Particle
 {
 	Particle() {}
+	PVector p = new PVector(random(width), random(height));
+	PVector v = new PVector(0,0);
 
-	float x = random(width);
-	float y = random(height);
-	float vx = 0;
-	float vy = 0;
 	final static float dt = 1;
 	final static float max_a = 5;
 	final static float max_v = 29;
 	final static float max_wasp_v = 15;
 
-	void bee_move(float tx, float ty)
+	void bee_move(PVector t)
 	{
-		float dx = tx - x;
-		float dy = ty - y;
+		PVector d = minus(t, p);
 
-		float dist = sqrt(dx*dx + dy*dy);
+		float dist = mag(d);
 		if (dist == 0)
 			dist = 1;
 
 		// adjust the accelerations up to the maximum
 		// add some random noise to ensure that they don't bunch
-		float dvx = (dx * max_a) / dist;
-		float dvy = (dy * max_a) / dist;
-		vx = limit(vx + dvx, -max_v, max_v) + random(-1,1);
-		vy = limit(vy + dvy, -max_v, max_v) + random(-1,1);
+		PVector dv = times(d, max_a / dist);
+		v = plus(limit(plus(v, dv), -max_v, max_v), random3(-1,-1));
 
-		x += vx;
-		y += vy;
+		p = plus(p, v);
 	}
 
 	void wasp_move()
 	{
 		// wasp is not acceleration limited
-		vx = limit(vx + random(-5,5), -max_wasp_v, max_wasp_v);
-		vy = limit(vy + random(-5,5), -max_wasp_v, max_wasp_v);
+		v = limit(plus(v, random3(-5, 5)), -max_wasp_v, max_wasp_v);
 
 		// nudge the wasp towards the center of the screen
-		if (x < width/2)
-			vx += random(2);
+		if (p.x < width/2)
+			v.x += random(2);
 		else
-			vx -= random(2);
+			v.x -= random(2);
 
-		if (y < height/2)
-			vy += random(2);
+		if (p.y < height/2)
+			v.y += random(2);
 		else
-			vy -= random(2);
+			v.y -= random(2);
 
-		x += vx;
-		y += vy;
+		if (p.z < height/2)
+			v.z += random(2);
+		else
+			v.z -= random(2);
 
-		if (x < 0 || x > width)
-		{
-			vx = -vx;
-			x += 2*vx;
-		}
+		p = plus(p, v);
 
-		if (y < 0 || y > height)
-		{
-			vy = -vy;
-			y += 2*vy;
-		}
+		// bounce the wasp off the corner of the screen
+		if (p.x < 0 || p.x > width)
+			v.x = -v.x;
+
+		if (p.y < 0 || p.y > height)
+			v.y = -v.y;
+
+		if (p.z < 0 || p.z > height)
+			v.z = -v.z;
 	}
 
 	void draw(boolean bright)
 	{
-		vector_line(bright, x, y, x - vx, y - vy);
+		PVector p2 = minus(p,v);
+		vector_line(bright, p, p2);
 	}
 };
+
 
 final int num_bees = 50;
 Particle wasp;
@@ -101,8 +81,6 @@ void swarm_draw() {
   if (wasp == null)
   {
 	wasp = new Particle();
-	wasp.vx = 3;
-	wasp.vy = 5;
 	bees = new Particle[num_bees];
 	for(int i = 0 ; i < num_bees; i++)
 		bees[i] = new Particle();
@@ -118,10 +96,10 @@ void swarm_draw() {
   // update the wasp with the mouse
   if (wasp_follows_mouse)
   {
-    wasp.vx = mouseX - wasp.x;
-    wasp.vy = mouseY - wasp.y;
-    wasp.x = mouseX;
-    wasp.y = mouseY;
+    wasp.v.x = mouseX - wasp.p.x;
+    wasp.v.y = mouseY - wasp.p.y;
+    wasp.p.x = mouseX;
+    wasp.p.y = mouseY;
   } else {
     wasp.wasp_move();
   }
@@ -132,19 +110,8 @@ void swarm_draw() {
   strokeWeight(5);
   for(Particle bee : bees)
   {
-	bee.bee_move(wasp.x, wasp.y);
+	bee.bee_move(wasp.p);
 	bee.draw(false);
   }
 
-  float angle = atan2(wasp.vy, wasp.vx);
-
-/*
-  vector_string(String.format("%.0f,%.0f", wasp.x, wasp.y),
-    wasp.x,
-    wasp.y,
-    20,
-    angle,
-    false
-  );
-*/
 }
