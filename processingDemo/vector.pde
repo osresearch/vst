@@ -19,7 +19,7 @@ vector_setup()
 {
 	clip = new Clipping(
 		new Point2(0,0),
-		new Point2(width,height)
+		new Point2(width-1,height-1)
 	);
 	// finding the right port requires picking it from the list
 	// should look for one that matches "ttyACM*" or "tty.usbmodem*"
@@ -57,8 +57,8 @@ vector_line(
 )
 {
 	// can we detect resize?
-	clip.max.x = width;
-	clip.max.y = height;
+	clip.max.x = width-1;
+	clip.max.y = height-1;
 
 	Point2 p0 = new Point2(x0,y0);
 	Point2 p1 = new Point2(x1,y1);
@@ -185,6 +185,11 @@ PVector limit(PVector x, float min, float max)
 	if (n.z > max) n.z = max;
 
 	return n;
+}
+
+PVector unit(PVector x)
+{
+	return times(x, 1.0 / mag(x));
 }
 
 
