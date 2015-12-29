@@ -189,7 +189,7 @@ draw_box()
 }
 
 
-static float roll, pitch = 0.3, yaw = -0.2;
+static float roll = 0.2, pitch = -0.3, yaw = -0.2;
 static int frame_num;
 static int count;
 static int dir = 1;
@@ -213,7 +213,7 @@ demo3d_draw()
   pitch += 0.00;
   yaw -= 0.0000;
 
-  if (false)
+  if (true)
     draw_box();
 
   // draw lines for each of the random walks
@@ -234,8 +234,8 @@ demo3d_draw()
      if (frame_num == count || frame_num == count + 1)
        bright = true;
 
-     if (op != null && np != null)
-       vector_line(bright, op, np);
+     vector_line(bright, op, np);
+
      op = np;
   }
 
