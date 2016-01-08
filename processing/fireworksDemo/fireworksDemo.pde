@@ -1,69 +1,33 @@
-class FireworkManager extends DisplayableList {
-  void trigger(PVector position, int nFrames) {
-    this.add(new Firework(position, nFrames));
-  }
+Vst vst;
+PVector gravity;
+FireworkManager fireworkManager;
+
+void settings() {
+  size(500, 500, P2D);
+  pixelDensity(displayDensity());
 }
 
-class Firework extends DisplayableBase {
-  DisplayableList sparks = new DisplayableList();
-  int nFrames;
-  int framesLeft;
-  int nSparks = 50;
-  float sparkSize = 10;
+void setup() {
+  vst = new Vst(createSerial());
+  gravity = new PVector(0, 0.01);
+  fireworkManager = new FireworkManager();
+  fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(100, 300));
+  
+  frameRate(50);
+  blendMode(ADD);
+  noFill();
+  stroke(64, 255, 64);
+  strokeWeight(2);
+}
 
-  class Spark extends DisplayableBase {
-    PVector position;
-    PVector velocity;
+void draw() {
+  background(0);
 
-    Spark(PVector position, PVector velocity) {
-      this.position = position;
-      this.velocity = velocity;
-    }
-
-    void update() {
-      velocity.add(gravity);
-      position.add(velocity);
-      
-      if (position.x < -sparkSize || position.x >= width + sparkSize || position.y >= height + sparkSize) {
-        complete();
-      }
-    }
-
-    void display() {
-      float r = framesLeft / (float) nFrames;
-      PVector p2 = position.copy().sub(velocity.copy().mult(r * sparkSize));
-      boolean bright = random(0.75) < r;
-      vst.vline(bright, position, p2);
-    }
+  if (random(1.0) < 0.05) {
+    fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(50, 200));
   }
+  fireworkManager.update();
+  fireworkManager.display();
 
-  Firework(PVector position, int nFrames) {
-    this.nFrames = nFrames;
-    framesLeft = nFrames;
-
-    for (int i = 0; i < nSparks; i++) {
-      PVector velocity = PVector.fromAngle(random(TAU)).mult(random(2));
-      sparks.add(new Spark(position.copy(), velocity));
-    }
-  }
-
-  boolean updateFrame() {
-    if (--framesLeft == 0) {
-      complete();
-      return true;
-    }
-
-    return false;
-  }
-
-  void update() {
-    if (updateFrame()) {
-      return;
-    }
-    sparks.update();
-  }
-
-  void display() {
-    sparks.display();
-  }
+  vst.display();
 }
