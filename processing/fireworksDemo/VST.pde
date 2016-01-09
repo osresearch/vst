@@ -4,10 +4,8 @@ class Vst extends DisplayableBase {
   float brightnessNormal = 80;
   float brightnessBright = 255;
   private Clipping clip;
-  private Serial serial;
   private IntPoint lastPoint;
-  private byte[] buffer = new byte[8192];
-  private int byte_count = 0;
+  VstBuffer buffer;  
 
   class IntPoint {
     int x = 0;
@@ -38,17 +36,18 @@ class Vst extends DisplayableBase {
   Vst() {
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
     lastPoint = new IntPoint();
-    resetBuffer();
+    buffer = new VstBuffer();
+    buffer.reset();
   }
 
   Vst(Serial serial) {
     this();
-    this.serial = serial;
+    buffer.setSerial(serial);
   }
 
   void display() {
     displayBuffer();
-    sendBuffer();
+    buffer.send();
   }
 
   void vline(boolean bright, float x0, float y0, float x1, float y1) {
@@ -87,11 +86,6 @@ class Vst extends DisplayableBase {
   }
 
   void vpoint(int bright, PVector v) {
-    // Don't exceend buffer length. Compensate for new cmd and draw frame command.
-    if (byte_count >= buffer.length - 7) {
-      return;
-    }
-
     IntPoint p = new IntPoint(v);
     p.x = (int) (p.x * 2047 / width);
     p.y = (int) 2047 - (p.y * 2047 / height);
@@ -101,70 +95,35 @@ class Vst extends DisplayableBase {
     }
 
     lastPoint = p.copy();
-
-    int cmd = (bright & 3) << 22 | (p.x & 2047) << 11 | (p.y & 2047) << 0;
-    buffer[byte_count++] = (byte) ((cmd >> 16) & 0xFF);
-    buffer[byte_count++] = (byte) ((cmd >>  8) & 0xFF);
-    buffer[byte_count++] = (byte) (cmd & 0xFF);
-  }
-
-  private void resetBuffer() {
-    byte_count = 0;
-    buffer[byte_count++] = 0;
-    buffer[byte_count++] = 0;
-    buffer[byte_count++] = 0;
-    buffer[byte_count++] = 0;
-  }
-
-  private void sendBuffer() {
-    // add the "draw frame" command
-    buffer[byte_count++] = 1;
-    buffer[byte_count++] = 1;
-    buffer[byte_count++] = 1;
-
-    if (serial != null) {
-      serial.write(subset(buffer, 0, byte_count));
-    }
-
-    resetBuffer();
+    buffer.add(bright, p.x, p.y);
   }
 
   void displayBuffer() {
-    int counter = 4;                    // Compensate for frame header 
     PVector lastPoint = new PVector();
+    Iterator iter = buffer.iterator();
+    
+    while (iter.hasNext()) {
+     VstFrame f = (VstFrame) iter.next();
+     PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
 
-    while (counter < byte_count) {
-      int byte0 = buffer[counter++] & 0xff;
-      int byte1 = buffer[counter++] & 0xff;
-      int byte2 = buffer[counter++] & 0xff;
-      int frame = (byte0 << 16 | byte1 << 8 | byte2);
-      int cmd = (frame >> 22) & 3;
-      int x = (frame >> 11) & 2047;
-      int y = frame & 2047;
-      PVector p = vstPointToPVector(x, y);
-
-      if (cmd == 1) {
-        // Transit
-        lastPoint = p;
-      } else if (cmd == 2) {
-        // Normal
-        pushStyle();
-        stroke(g.strokeColor, brightnessNormal);        
-        line(p.x, p.y, lastPoint.x, lastPoint.y);
-        popStyle();
-        lastPoint = p;
-      } else if (cmd == 3) {
-        // Bright
-        pushStyle();
-        stroke(g.strokeColor, brightnessBright);        
-        line(p.x, p.y, lastPoint.x, lastPoint.y);
-        popStyle();
-        lastPoint = p;
-      }
+     if (f.bright == 1) {
+       // Transit
+       lastPoint = p;
+     } else if (f.bright == 2) {
+       // Normal
+       pushStyle();
+       stroke(g.strokeColor, brightnessNormal);        
+       line(p.x, p.y, lastPoint.x, lastPoint.y);
+       popStyle();
+       lastPoint = p;
+     } else if (f.bright == 3) {
+       // Bright
+       pushStyle();
+       stroke(g.strokeColor, brightnessBright);        
+       line(p.x, p.y, lastPoint.x, lastPoint.y);
+       popStyle();
+       lastPoint = p;
+     }
     }
-  }
-
-  private PVector vstPointToPVector(int x, int y) {
-    return new PVector((float) (x / 2047.0) * width, (float) ((2047 - y) / 2047.0) * height);
   }
 }

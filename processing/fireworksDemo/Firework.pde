@@ -18,6 +18,7 @@ class Firework extends DisplayableBase {
     Spark(PVector position, PVector velocity) {
       this.position = position;
       this.velocity = velocity;
+      //position.add();
     }
 
     void update() {

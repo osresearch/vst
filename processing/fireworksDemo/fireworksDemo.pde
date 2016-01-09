@@ -21,7 +21,7 @@ void setup() {
 }
 
 void draw() {
-  background(0);
+  background(0, 24, 0);
 
   if (random(1.0) < 0.05) {
     fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(50, 200));
