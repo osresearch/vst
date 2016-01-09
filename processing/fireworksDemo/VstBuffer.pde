@@ -10,13 +10,14 @@ class VstFrame {
   }
 }
 
+
 class VstBuffer implements Iterable<VstFrame> {
   private final static int LENGTH = 8192;
   private final static int HEADER_LENGTH = 4;
   private final static int TAIL_LENGTH = 3;
   private byte[] buffer = new byte[LENGTH];
   private int byte_count = 0;
-  Serial serial;
+  private Serial serial;
 
   VstBuffer() {
   }
@@ -51,9 +52,9 @@ class VstBuffer implements Iterable<VstFrame> {
     this.serial = serial;
   }
 
-  public void add(int cmd, int x, int y) {
+  public void add(int bright, int x, int y) {
     if (byte_count < LENGTH - TAIL_LENGTH) {
-      int frame = (cmd & 3) << 22 | (x & 2047) << 11 | (y & 2047) << 0;
+      int frame = (bright & 3) << 22 | (x & 2047) << 11 | (y & 2047) << 0;
       buffer[byte_count++] = (byte) ((frame >> 16) & 0xFF);
       buffer[byte_count++] = (byte) ((frame >>  8) & 0xFF);
       buffer[byte_count++] = (byte) (frame & 0xFF);
