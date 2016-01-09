@@ -81,11 +81,19 @@ class Camera
 }
 
 
-static Camera c;
-static PVector[] walk;
-static boolean[][][] used;
-static final int bound = 10;
+class Demo3D extends Demo
+{
+Camera c;
+PVector[] walk;
+boolean[][][] used;
+final int bound = 10;
 
+
+Demo3D()
+{
+    c = new Camera();
+    count = generate_walk(max_count, new PVector(0,0,0));
+}
 
 int
 generate_walk(
@@ -189,24 +197,18 @@ draw_box()
 }
 
 
-static float roll = 0.2, pitch = -0.3, yaw = -0.2;
-static int frame_num;
-static int count;
-static int dir = 1;
+float roll = 0.2, pitch = -0.3, yaw = -0.2;
+int frame_num;
+final int max_count = 500;
+int count;
+int dir = 1;
 
 void
-demo3d_draw()
+draw()
 {
   background(0);
   strokeWeight(2);
 
-  final int max_count = 500;
-
-  if (c == null)
-  {
-    c = new Camera();
-    count = generate_walk(max_count, new PVector(0,0,0));
-  }
 
   c.setup(1.5*bound, roll, pitch, yaw);
   roll += 0.02;
@@ -252,4 +254,5 @@ demo3d_draw()
   if (frame_num % 2 == 0)
     saveFrame("png/f######.png");
 */
+}
 }

@@ -71,21 +71,23 @@ class Particle
 };
 
 
+class SwarmDemo extends Demo
+{
 final int num_bees = 50;
 Particle wasp;
 Particle[] bees;
 boolean wasp_follows_mouse = false;
 
 
-void swarm_draw() {
-  if (wasp == null)
-  {
+SwarmDemo()
+{
 	wasp = new Particle();
 	bees = new Particle[num_bees];
 	for(int i = 0 ; i < num_bees; i++)
 		bees[i] = new Particle();
-  }
+}
 
+void draw() {
   background(0);
   strokeWeight(10);
   
@@ -114,4 +116,5 @@ void swarm_draw() {
 	bee.draw(false);
   }
 
+}
 }

@@ -1,7 +1,18 @@
 /** \file
- * Qix-like demo of drawing vectors with Processing.
+ * Several different drawing demos.
+ *
+ * (c) 2016 Trammell Hudson
  */
-DemoSVG d;
+
+class Demo
+{
+	void draw() {}
+}
+
+
+ArrayList<Demo> demos;
+int frame_count = 0;
+Demo d;
 
 void setup() {
     size(1024, 1200);
@@ -14,17 +25,26 @@ void setup() {
     stroke(212, 128, 32, 128);
 
     frameRate(25);
-    //d = new DemoSVG("32c3_knot.svg");
+
+    demos = new ArrayList<Demo>();
+   
+    demos.add(new Demo3D());
+    demos.add(new SwarmDemo());
+    demos.add(new QixDemo());
+    demos.add(new SpiralDemo());
+
+    d = demos.get(0);
 }
 
-float a = 0;
 
 void draw() {
-    //qix_draw();
-    //swarm_draw();
-    //spiral_draw();
-    demo3d_draw();
-    //d.draw();
+    if (frame_count++ > 1000)
+    {
+        frame_count = 0;
+        d = demos.get((int) random(demos.size()));
+    }
+    
+    d.draw();
 
     vector_send();
 }
