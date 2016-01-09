@@ -1,7 +1,7 @@
 /** \file
  * Several different drawing demos.
  *
- * (c) 2016 Trammell Hudson
+ * (c) 2016 Trammell Hudson, Adelle Lin and Jacob Joaquin
  */
 
 class Demo
