@@ -1,5 +1,9 @@
 /** \file
- * V.st vector board interface
+ * V.st vector board interface.
+ *
+ * This handles storing the vectors, clipping them to the display,
+ * mirroring the line segments on the real display and sending them
+ * to the serial port.
  */
 import processing.serial.*;
 
@@ -18,8 +22,8 @@ void
 vector_setup()
 {
 	clip = new Clipping(
-		new Point2(0,0),
-		new Point2(width-1,height-1)
+		new PVector(0,0),
+		new PVector(width-1,height-1)
 	);
 	// finding the right port requires picking it from the list
 	// should look for one that matches "ttyACM*" or "tty.usbmodem*"
@@ -37,16 +41,6 @@ vector_setup()
 }
 
 
-boolean
-vector_offscreen(
-	float x,
-	float y
-)
-{
-	return (x < 0 || x >= width || y < 0 || y >= height);
-}
-
-
 void
 vector_line(
 	boolean bright,
@@ -56,44 +50,38 @@ vector_line(
 	float y1
 )
 {
-	// can we detect resize?
-	clip.max.x = width-1;
-	clip.max.y = height-1;
-
-	Point2 p0 = new Point2(x0,y0);
-	Point2 p1 = new Point2(x1,y1);
-
-	stroke(bright ? 255 : 120);
-	if (!clip.clip(p0, p1))
-		return;
-
-	line(p0.x, p0.y, p1.x, p1.y);
-
-	// The clip above should ensure that this never happens
-	// but just in case, we will discard those points
-	if (vector_offscreen(p0.x,p0.y)
-	||  vector_offscreen(p1.x,p1.y))
-	{
-		return;
-	}
-
-	vector_point(1, p0.x, p0.y);
-	vector_point(bright ? 3 : 2, p1.x, p1.y);
+	vector_line(bright, new PVector(x0,y0), new PVector(x1,y1));
 }
 
 
 void
 vector_line(
   boolean bright,
-  PVector p0,
-  PVector p1
+  PVector p0_in,
+  PVector p1_in
 )
 {
-  if (p0 == null || p1 == null)
-    return;
-  vector_line(bright, p0.x, p0.y, p1.x, p1.y);
-}
+	if (p0_in == null || p1_in == null)
+		return;
 
+	// can we detect resize?
+	clip.max.x = width-1;
+	clip.max.y = height-1;
+
+	stroke(bright ? 255 : 120);
+
+	// clipping might modify the point, so we must copy
+	PVector p0 = p0_in.copy();
+	PVector p1 = p1_in.copy();
+
+	if (!clip.clip(p0, p1))
+		return;
+
+	line(p0.x, p0.y, p1.x, p1.y);
+
+	vector_point(1, p0.x, p0.y);
+	vector_point(bright ? 3 : 2, p1.x, p1.y);
+}
 
 
 void
@@ -141,28 +129,6 @@ void vector_send()
 	bytes[byte_count++] = 0;
 }
 
-/*
- * 3D vector math operations
- */
-PVector plus(PVector a, PVector b)
-{
-	return new PVector(a.x + b.x, a.y + b.y, a.z + b.z);
-}
-
-PVector minus(PVector a, PVector b)
-{
-	return new PVector(a.x - b.x, a.y - b.y, a.z - b.z);
-}
-
-PVector times(PVector a, float k)
-{
-	return new PVector(k*a.x, k*a.y, k*a.z);
-}
-
-float mag(PVector a)
-{
-	return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
-}
 
 PVector random3(float min, float max)
 {
@@ -189,7 +155,7 @@ PVector limit(PVector x, float min, float max)
 
 PVector unit(PVector x)
 {
-	return times(x, 1.0 / mag(x));
+	return PVector.mult(x, 1.0 / x.mag());
 }
 
 

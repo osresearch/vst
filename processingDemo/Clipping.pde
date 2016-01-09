@@ -3,23 +3,10 @@
  * https://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
  */
 
-class Point2
-{
-    float x;
-    float y;
-
-    Point2(float _x, float _y)
-    {
-        x = _x;
-        y = _y;
-    }
-}
-
-
 class Clipping
 {
-    final Point2 min;
-    final Point2 max;
+    final PVector min;
+    final PVector max;
 
     final static int INSIDE = 0;
     final static int LEFT = 1;
@@ -27,7 +14,7 @@ class Clipping
     final static int BOTTOM = 4;
     final static int TOP = 8;
 
-    Clipping(Point2 p0, Point2 p1)
+    Clipping(PVector p0, PVector p1)
     {
         float x0, y0, x1, y1;
 
@@ -51,11 +38,11 @@ class Clipping
             y1 = p0.y;
         }
 
-        min = new Point2(x0, y0);
-        max = new Point2(x1, y1);
+        min = new PVector(x0, y0);
+        max = new PVector(x1, y1);
     }
 
-    int compute_code(Point2 p)
+    int compute_code(PVector p)
     {
         int code = INSIDE;
         if (p.x < min.x)
@@ -79,7 +66,7 @@ class Clipping
     // rectangular clipping region min/max.
     // p0 and p1 will be modified to be in the region
     // returns true if the line segment is visible at all
-    boolean clip(Point2 p0, Point2 p1)
+    boolean clip(PVector p0, PVector p1)
     {
         int code0 = compute_code(p0);
         int code1 = compute_code(p1);

@@ -15,24 +15,24 @@ class Particle
 
 	void bee_move(PVector t)
 	{
-		PVector d = minus(t, p);
+		PVector d = PVector.sub(t, p);
 
-		float dist = mag(d);
+		float dist = d.mag();
 		if (dist == 0)
 			dist = 1;
 
 		// adjust the accelerations up to the maximum
 		// add some random noise to ensure that they don't bunch
-		PVector dv = times(d, max_a / dist);
-		v = plus(limit(plus(v, dv), -max_v, max_v), random3(-1,-1));
+		PVector dv = PVector.mult(d, max_a / dist);
+		v = PVector.add(limit(PVector.add(v, dv), -max_v, max_v), random3(-1,-1));
 
-		p = plus(p, v);
+		p.add(v);
 	}
 
 	void wasp_move()
 	{
 		// wasp is not acceleration limited
-		v = limit(plus(v, random3(-5, 5)), -max_wasp_v, max_wasp_v);
+		v = limit(PVector.add(v, random3(-5, 5)), -max_wasp_v, max_wasp_v);
 
 		// nudge the wasp towards the center of the screen
 		if (p.x < width/2)
@@ -50,7 +50,7 @@ class Particle
 		else
 			v.z -= random(2);
 
-		p = plus(p, v);
+		p.add(v);
 
 		// bounce the wasp off the corner of the screen
 		if (p.x < 0 || p.x > width)
@@ -65,7 +65,7 @@ class Particle
 
 	void draw(boolean bright)
 	{
-		PVector p2 = minus(p,v);
+		PVector p2 = PVector.sub(p,v);
 		vector_line(bright, p, p2);
 	}
 };
