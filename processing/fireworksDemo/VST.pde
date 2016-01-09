@@ -3,39 +3,13 @@ import processing.serial.*;
 class Vst extends DisplayableBase {
   float brightnessNormal = 80;
   float brightnessBright = 255;
-  private Clipping clip;
-  private IntPoint lastPoint;
   VstBuffer buffer;  
-
-  class IntPoint {
-    int x = 0;
-    int y = 0;
-
-    IntPoint() {
-    }
-
-    IntPoint(PVector p) {
-      x = (int) p.x;
-      y = (int) p.y;
-    }
-
-    IntPoint(int x, int y) {
-      this.x = x;
-      this.y = y;
-    }
-
-    IntPoint copy() {
-      return new IntPoint(x, y);
-    }
-
-    boolean equals(IntPoint p) {
-      return p.x == x && p.y == y;
-    }
-  }
-
+  private Clipping clip;
+  private int lastX;
+  private int lastY;
+  
   Vst() {
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
-    lastPoint = new IntPoint();
     buffer = new VstBuffer();
     buffer.reset();
   }
@@ -86,16 +60,16 @@ class Vst extends DisplayableBase {
   }
 
   void vpoint(int bright, PVector v) {
-    IntPoint p = new IntPoint(v);
-    p.x = (int) (p.x * 2047 / width);
-    p.y = (int) 2047 - (p.y * 2047 / height);
+    int x = (int) (v.x * 2047 / width);
+    int y = (int) (2047 - (v.y * 2047 / height));
 
-    if (p.equals(lastPoint)) {
+    if (x == lastX && y == lastY) {
       return;
     }
 
-    lastPoint = p.copy();
-    buffer.add(bright, p.x, p.y);
+    lastX = x;
+    lastY = y;
+    buffer.add(bright, x, y);
   }
 
   void displayBuffer() {
