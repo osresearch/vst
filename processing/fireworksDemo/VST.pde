@@ -1,6 +1,6 @@
 import processing.serial.*;
 
-class Vst extends DisplayableBase {
+class Vst {
   float brightnessNormal = 80;
   float brightnessBright = 255;
   VstBuffer buffer;  
