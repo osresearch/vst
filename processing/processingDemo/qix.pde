@@ -2,19 +2,21 @@
  * Qix-like demo of drawing vectors with Processing.
  */
 
-final int segments = 20;
+class QixDemo extends Demo
+{
+final int segments = 10;
 
 float[] x0 = new float[segments];
 float[] y0 = new float[segments];
 float[] x1 = new float[segments];
 float[] y1 = new float[segments];
-float vx0 = random(10)+5;
-float vy0 = random(10)+5;
-float vx1 = random(10)+4;
-float vy1 = random(10)+4;
+float vx0 = random(20)+5;
+float vy0 = random(20)+5;
+float vx1 = random(20)+4;
+float vy1 = random(20)+4;
 int head = 0;
 
-void qix_draw() {
+void draw() {
   background(0);
   strokeWeight(5);
 
@@ -83,4 +85,5 @@ void qix_draw() {
   y1[new_head] = ny;
 
   head = new_head;
+}
 }

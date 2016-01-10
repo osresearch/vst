@@ -6,14 +6,16 @@
  *
  * (c) 2015 Jacob Joaquin.
  */
-static int nPoints = 5;
-static int nSpawns = 25;
+class SpiralDemo extends Demo
+{
+static final int nPoints = 5;
+static final int nSpawns = 25;
 
-static int nFrames = 100;
-static float phase = 0.0;
-static float phaseInc = 1 / (float) nFrames;
+static final int nFrames = 100;
+static final float phaseInc = 1.0 / nFrames;
+float phase = 0.0;
 
-void spiral_draw()
+void draw()
 {
   background(0);
 
@@ -39,4 +41,5 @@ void spiral_draw()
 
   phase += phaseInc;
   phase -= (int) phase;
+}
 }
