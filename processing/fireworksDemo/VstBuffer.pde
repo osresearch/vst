@@ -50,8 +50,8 @@ class VstBuffer extends ArrayList<VstFrame> {
     }
 
     if (serial != null) {
-
       int byte_count = 0;
+      
       // Header
       buffer[byte_count++] = 0;
       buffer[byte_count++] = 0;
@@ -78,9 +78,9 @@ class VstBuffer extends ArrayList<VstFrame> {
 
     clear();
   }
-  
+
   private VstBuffer sort() {
-        VstBuffer destination = new VstBuffer();      
+    VstBuffer destination = new VstBuffer();      
     VstBuffer src = (VstBuffer) clone();
 
     VstFrame lastFrame = new VstFrame(1024, 1024, 0);
@@ -140,8 +140,8 @@ class VstBuffer extends ArrayList<VstFrame> {
 
     return destination;
   }
-  
-  private float countDistance(ArrayList<VstFrame> fList) {
+
+  float measureTransitDistance(ArrayList<VstFrame> fList) {
     float distance = 0.0;
     VstFrame last = new VstFrame(1024, 1024, 0);
     for (VstFrame f : fList) {
