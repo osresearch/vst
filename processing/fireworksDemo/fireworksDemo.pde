@@ -12,7 +12,6 @@ void setup() {
   gravity = new PVector(0, 0.01);
   fireworkManager = new FireworkManager();
   fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(100, 300));
-  //fireworkManager.trigger(new PVector(width / 2.0, height / 2.0), (int) random(100, 300));
   
   frameRate(50);
   blendMode(ADD);

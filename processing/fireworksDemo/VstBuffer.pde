@@ -17,9 +17,6 @@ class VstBuffer extends ArrayList<VstFrame> {
   private final static int MAX_FRAMES = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 3;
   private final byte[] buffer = new byte[LENGTH];
   private Serial serial;
-  private boolean sortDiagnostics = true;
-  private float maxDifference = 0;
-  private float minDifference = 1;
 
   public void setSerial(Serial serial) {
     this.serial = serial;
@@ -52,14 +49,43 @@ class VstBuffer extends ArrayList<VstFrame> {
       return;
     }
 
-    println("Unsorted Transit distance: " + countDistance(this));
-    VstBuffer destination = new VstBuffer();      
+    if (serial != null) {
+
+      int byte_count = 0;
+      // Header
+      buffer[byte_count++] = 0;
+      buffer[byte_count++] = 0;
+      buffer[byte_count++] = 0;
+      buffer[byte_count++] = 0;
+
+      // Data
+      VstBuffer sorted = sort();
+      for (VstFrame frame : sorted) {
+        int v = (frame.z & 3) << 22 | (frame.x & 2047) << 11 | (frame.y & 2047) << 0;
+        buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
+        buffer[byte_count++] = (byte) ((v >>  8) & 0xFF);
+        buffer[byte_count++] = (byte) (v & 0xFF);
+      }
+
+      // Tail
+      buffer[byte_count++] = 1;
+      buffer[byte_count++] = 1;
+      buffer[byte_count++] = 1;
+
+      // Send via serial
+      serial.write(subset(buffer, 0, byte_count));
+    }
+
+    clear();
+  }
+  
+  private VstBuffer sort() {
+        VstBuffer destination = new VstBuffer();      
     VstBuffer src = (VstBuffer) clone();
 
     VstFrame lastFrame = new VstFrame(1024, 1024, 0);
     VstFrame nearestFrame = lastFrame;
 
-    println("Begin sort");
     while (!src.isEmpty()) {
       int startIndex = 0;
       int endIndex = 0;
@@ -112,46 +138,10 @@ class VstBuffer extends ArrayList<VstFrame> {
       src.removeRange(startIndex, endIndex + 1);
     }
 
-    if (sortDiagnostics) {
-      float original = countDistance(this);
-      float sort = countDistance(destination);
-      float diff = sort / original;
-      maxDifference = max(diff, maxDifference);
-      minDifference = min(diff, minDifference);
-      println("***Sorts: " +  original + ", " + sort + ", " + diff);
-      println("***min/Max " +  minDifference + ", " + maxDifference);
-    }
-
-    if (serial != null) {
-
-      int byte_count = 0;
-      // Header
-      buffer[byte_count++] = 0;
-      buffer[byte_count++] = 0;
-      buffer[byte_count++] = 0;
-      buffer[byte_count++] = 0;
-
-      // Data
-      for (VstFrame frame : destination) {
-        int v = (frame.z & 3) << 22 | (frame.x & 2047) << 11 | (frame.y & 2047) << 0;
-        buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
-        buffer[byte_count++] = (byte) ((v >>  8) & 0xFF);
-        buffer[byte_count++] = (byte) (v & 0xFF);
-      }
-
-      // Tail
-      buffer[byte_count++] = 1;
-      buffer[byte_count++] = 1;
-      buffer[byte_count++] = 1;
-
-      // Send via serial
-      serial.write(subset(buffer, 0, byte_count));
-    }
-
-    clear();
+    return destination;
   }
-
-  float countDistance(ArrayList<VstFrame> fList) {
+  
+  private float countDistance(ArrayList<VstFrame> fList) {
     float distance = 0.0;
     VstFrame last = new VstFrame(1024, 1024, 0);
     for (VstFrame f : fList) {
