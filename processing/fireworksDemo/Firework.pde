@@ -19,6 +19,7 @@ class Firework extends DisplayableBase {
       this.position = position;
       this.velocity = velocity;      
       position.add(velocity.copy().normalize().mult(sparkSize * 0.8));
+      //position.add(velocity.copy().normalize().mult(100));
     }
 
     void update() {

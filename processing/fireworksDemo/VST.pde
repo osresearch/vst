@@ -74,16 +74,10 @@ class Vst extends DisplayableBase {
   void displayBuffer() {
     PVector lastPoint = new PVector();
     Iterator iter = buffer.iterator();
-    float distance = 0;
-    boolean printTotalPath = true;
 
     while (iter.hasNext()) {
       VstFrame f = (VstFrame) iter.next();
       PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
-
-      if (printTotalPath) {
-        distance += p.dist(lastPoint);
-      }
 
       if (f.z == 1) {
         // Transit
@@ -104,9 +98,9 @@ class Vst extends DisplayableBase {
         lastPoint = p;
       }
     }
+  }
 
-    if (printTotalPath) {
-      println(distance);
-    }
+  PVector vstToScreen(VstFrame f) {
+    return new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
   }
 }
