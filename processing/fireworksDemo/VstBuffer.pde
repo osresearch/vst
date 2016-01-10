@@ -63,10 +63,6 @@ class VstBuffer extends ArrayList<VstFrame> {
       serial.write(subset(buffer, 0, byte_count));
     }
 
-    reset();
-  }
-
-  private void reset() {
     clear();
   }
 }

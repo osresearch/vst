@@ -11,7 +11,6 @@ class Vst extends DisplayableBase {
   Vst() {
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
     buffer = new VstBuffer();
-    buffer.reset();
   }
 
   Vst(Serial serial) {
