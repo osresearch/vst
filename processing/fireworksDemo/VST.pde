@@ -7,7 +7,7 @@ class Vst extends DisplayableBase {
   private Clipping clip;
   private int lastX;
   private int lastY;
-  
+
   Vst() {
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
     buffer = new VstBuffer();
@@ -69,35 +69,45 @@ class Vst extends DisplayableBase {
 
     lastX = x;
     lastY = y;
-    buffer.add(bright, x, y);
+    buffer.add(x, y, bright);
   }
 
   void displayBuffer() {
     PVector lastPoint = new PVector();
     Iterator iter = buffer.iterator();
-    
-    while (iter.hasNext()) {
-     VstFrame f = (VstFrame) iter.next();
-     PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
+    float distance = 0;
+    boolean printTotalPath = true;
 
-     if (f.bright == 1) {
-       // Transit
-       lastPoint = p;
-     } else if (f.bright == 2) {
-       // Normal
-       pushStyle();
-       stroke(g.strokeColor, brightnessNormal);        
-       line(p.x, p.y, lastPoint.x, lastPoint.y);
-       popStyle();
-       lastPoint = p;
-     } else if (f.bright == 3) {
-       // Bright
-       pushStyle();
-       stroke(g.strokeColor, brightnessBright);        
-       line(p.x, p.y, lastPoint.x, lastPoint.y);
-       popStyle();
-       lastPoint = p;
-     }
+    while (iter.hasNext()) {
+      VstFrame f = (VstFrame) iter.next();
+      PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
+
+      if (printTotalPath) {
+        distance += p.dist(lastPoint);
+      }
+
+      if (f.z == 1) {
+        // Transit
+        lastPoint = p;
+      } else if (f.z == 2) {
+        // Normal
+        pushStyle();
+        stroke(g.strokeColor, brightnessNormal);        
+        line(p.x, p.y, lastPoint.x, lastPoint.y);
+        popStyle();
+        lastPoint = p;
+      } else if (f.z == 3) {
+        // Bright
+        pushStyle();
+        stroke(g.strokeColor, brightnessBright);        
+        line(p.x, p.y, lastPoint.x, lastPoint.y);
+        popStyle();
+        lastPoint = p;
+      }
+    }
+
+    if (printTotalPath) {
+      println(distance);
     }
   }
 }

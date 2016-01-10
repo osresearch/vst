@@ -1,68 +1,59 @@
 class VstFrame {
-  int bright;
   int x;
   int y;
+  int z;
 
-  VstFrame(int bright, int x, int y) {
-    this.bright = bright;
+  VstFrame(int x, int y, int z) {
     this.x = x;
     this.y = y;
+    this.z = z;
   }
 }
 
-
-class VstBuffer implements Iterable<VstFrame> {
+class VstBuffer extends ArrayList<VstFrame> {
   private final static int LENGTH = 8192;
   private final static int HEADER_LENGTH = 4;
   private final static int TAIL_LENGTH = 3;
+  private final static int MAX_FRAMES = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 3;
   private byte[] buffer = new byte[LENGTH];
-  private int byte_count = 0;
   private Serial serial;
-
-  VstBuffer() {
-  }
-
-  public Iterator<VstFrame> iterator() {
-    Iterator<VstFrame> it = new Iterator<VstFrame>() {
-      private int index = HEADER_LENGTH;
-
-      @Override
-        public boolean hasNext() {
-        return index + 3 < byte_count;
-      }
-
-      @Override
-        public VstFrame next() {
-        int byte0 = buffer[index++] & 0xff;
-        int byte1 = buffer[index++] & 0xff;
-        int byte2 = buffer[index++] & 0xff;
-        int frame = (byte0 << 16 | byte1 << 8 | byte2);
-        return new VstFrame((frame >> 22) & 3, (frame >> 11) & 2047, frame & 2047);
-      }
-
-      @Override
-        public void remove() {
-        throw new UnsupportedOperationException();
-      }
-    };
-    return it;
-  }
 
   public void setSerial(Serial serial) {
     this.serial = serial;
   }
 
-  public void add(int bright, int x, int y) {
-    if (byte_count < LENGTH - TAIL_LENGTH) {
-      int frame = (bright & 3) << 22 | (x & 2047) << 11 | (y & 2047) << 0;
-      buffer[byte_count++] = (byte) ((frame >> 16) & 0xFF);
-      buffer[byte_count++] = (byte) ((frame >>  8) & 0xFF);
-      buffer[byte_count++] = (byte) (frame & 0xFF);
+  @Override
+    public boolean add(VstFrame frame) {
+    if (this.size() > MAX_FRAMES) {
+      throw new UnsupportedOperationException("VstBuffer at capacity. Vector discarded.");
     }
+    return super.add(frame);
+  }
+
+  public boolean add(int x, int y, int z) {
+    if (size() < LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) {
+      add(new VstFrame(x, y, z));
+      return true;
+    }
+    return false;
   }
 
   public void send() {
     if (serial != null) {
+      
+      int byte_count = 0;
+      buffer[byte_count++] = 0;
+      buffer[byte_count++] = 0;
+      buffer[byte_count++] = 0;
+      buffer[byte_count++] = 0;
+      
+      for (VstFrame frame : this) {
+        int v = (frame.z & 3) << 22 | (frame.x & 2047) << 11 | (frame.y & 2047) << 0;
+        buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
+        buffer[byte_count++] = (byte) ((v >>  8) & 0xFF);
+        buffer[byte_count++] = (byte) (v & 0xFF);
+      }
+
       // Add end frame
       buffer[byte_count++] = 1;
       buffer[byte_count++] = 1;
@@ -76,10 +67,6 @@ class VstBuffer implements Iterable<VstFrame> {
   }
 
   private void reset() {
-    byte_count = 0;
-    buffer[byte_count++] = 0;
-    buffer[byte_count++] = 0;
-    buffer[byte_count++] = 0;
-    buffer[byte_count++] = 0;
+    clear();
   }
 }
