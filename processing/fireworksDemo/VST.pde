@@ -59,8 +59,8 @@ class Vst {
   }
 
   void vpoint(int bright, PVector v) {
-    int x = (int) (v.x * 2047 / width);
-    int y = (int) (2047 - (v.y * 2047 / height));
+    int x = (int) (modelX(v.x, v.y, 0) * 2047 / width);
+    int y = (int) (2047 - (modelY(v.x, v.y, 0) * 2047 / height));
 
     if (x == lastX && y == lastY) {
       return;
