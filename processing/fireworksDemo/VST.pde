@@ -3,7 +3,7 @@ import processing.serial.*;
 class Vst {
   int brightnessNormal = 80;
   int brightnessBright = 255;
-  private VstBuffer buffer;
+  VstBuffer buffer;
   private PApplet parent;
   private Clipping clip;
   private int lastX;
@@ -23,7 +23,10 @@ class Vst {
   void display() {
     displayBuffer();
     buffer.send();
+    lastX = -1;       // TODO: Better choice for resetting lastX and lastY?
+    lastY = -1;
   }
+
 
   void line(boolean bright, float x0, float y0, float x1, float y1) {
     line(bright, new PVector(x0, y0), new PVector(x1, y1));
@@ -71,6 +74,20 @@ class Vst {
     lastX = x;
     lastY = y;
     buffer.add(x, y, bright);
+  }
+
+  void rect(boolean bright, float x, float y, float w, float h) {
+    pushMatrix();
+    translate(x, y);    
+    // Default is CORNER mode
+    if (g.rectMode == CENTER) {
+      translate(-w / 2.0, -h / 2.0);
+    }
+    line(bright, 0, 0, w, 0);
+    line(bright, w, 0, w, h);
+    line(bright, w, h, 0, h);
+    line(bright, 0, h, 0, 0);
+    popMatrix();
   }
 
   void displayBuffer() {
