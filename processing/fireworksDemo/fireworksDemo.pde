@@ -8,7 +8,7 @@ void settings() {
 }
 
 void setup() {
-  vst = new Vst(createSerial());
+  vst = new Vst(this, createSerial());
   gravity = new PVector(0, 0.01);
   fireworkManager = new FireworkManager();
   fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(100, 300));
