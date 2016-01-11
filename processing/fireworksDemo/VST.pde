@@ -22,8 +22,9 @@ class Vst {
     this(parent);
     buffer.setSerial(serial);
   }
-
+  
   void display() {
+    buffer.update();
     displayBuffer();
     buffer.send();
     lastX = -1;       // TODO: Better choice for resetting lastX and lastY?
@@ -96,13 +97,9 @@ class Vst {
   void displayBuffer() {
     PVector lastPoint = new PVector(width / 2.0, height / 2.0);  // Assumes V.st re-centers
     Iterator iter = buffer.iterator();
-    if (displayTransit) {
-      iter = buffer.sort().iterator();
-    }
     
     while (iter.hasNext()) {
       VstFrame f = (VstFrame) iter.next();
-      println(f.x + ", " + f.y + ", " + f.z);
       PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
 
       if (f.z <= 1) {
@@ -169,6 +166,12 @@ class VstBuffer extends ArrayList<VstFrame> {
     return super.add(frame);
   }
 
+  public void update() {
+    VstBuffer temp = sort();
+    clear();
+    addAll(temp);
+  }
+  
   public boolean add(int x, int y, int z) {
     int size = size();
     if (size() < LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) {
@@ -198,8 +201,7 @@ class VstBuffer extends ArrayList<VstFrame> {
       buffer[byte_count++] = 0;
 
       // Data
-      VstBuffer sorted = sort();
-      for (VstFrame frame : sorted) {
+      for (VstFrame frame : this) {
         int v = (frame.z & 3) << 22 | (frame.x & 2047) << 11 | (frame.y & 2047) << 0;
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
         buffer[byte_count++] = (byte) ((v >>  8) & 0xFF);
