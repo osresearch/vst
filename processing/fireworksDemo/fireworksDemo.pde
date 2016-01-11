@@ -18,7 +18,7 @@ void setup() {
   noFill();
   stroke(64, 255, 64);
   strokeWeight(2);
-  vst.displayTransit = true;
+  //vst.displayTransit = true;
 }
 
 void draw() {
