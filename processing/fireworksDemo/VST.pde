@@ -1,9 +1,9 @@
 import processing.serial.*;
 
 class Vst {
-  float brightnessNormal = 80;
-  float brightnessBright = 255;
-  VstBuffer buffer;
+  int brightnessNormal = 80;
+  int brightnessBright = 255;
+  private VstBuffer buffer;
   private PApplet parent;
   private Clipping clip;
   private int lastX;
