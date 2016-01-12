@@ -2,9 +2,9 @@ import java.util.Iterator;
 import processing.serial.*;
 
 class Vst {
-  int brightnessNormal = 80;
-  int brightnessBright = 255;
-  color transitColor = color(255, 0, 0, 80);
+  color colorNormal = color(0, 80);
+  color colorBright = color(0);
+  color colorTransit = color(255, 0, 0, 80);
   boolean displayTransit = false;
   VstBuffer buffer;
   private PApplet parent;
@@ -106,7 +106,7 @@ class Vst {
         // Transit
         if (displayTransit) {
           pushStyle();
-          stroke(transitColor);        
+          stroke(colorTransit);        
           parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
           popStyle();
         }
@@ -114,14 +114,14 @@ class Vst {
       } else if (f.z == 2) {
         // Normal
         pushStyle();
-        stroke(g.strokeColor, brightnessNormal);        
+        stroke(colorNormal);        
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
         popStyle();
         lastPoint = p;
       } else if (f.z == 3) {
         // Bright
         pushStyle();
-        stroke(g.strokeColor, brightnessBright);        
+        stroke(colorNormal);        
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
         popStyle();
         lastPoint = p;
