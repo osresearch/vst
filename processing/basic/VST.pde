@@ -4,6 +4,8 @@ import processing.serial.*;
 class Vst {
   int brightnessNormal = 80;
   int brightnessBright = 255;
+  color transitColor = color(255, 0, 0, 80);
+  boolean displayTransit = false;
   VstBuffer buffer;
   private PApplet parent;
   private Clipping clip;
@@ -20,8 +22,9 @@ class Vst {
     this(parent);
     buffer.setSerial(serial);
   }
-
+  
   void display() {
+    buffer.update();
     displayBuffer();
     buffer.send();
     lastX = -1;       // TODO: Better choice for resetting lastX and lastY?
@@ -92,28 +95,34 @@ class Vst {
   }
 
   void displayBuffer() {
-    PVector lastPoint = new PVector();
+    PVector lastPoint = new PVector(width / 2.0, height / 2.0);  // Assumes V.st re-centers
     Iterator iter = buffer.iterator();
-
+    
     while (iter.hasNext()) {
       VstFrame f = (VstFrame) iter.next();
       PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
 
-      if (f.z == 1) {
+      if (f.z <= 1) {
         // Transit
+        if (displayTransit) {
+         pushStyle();
+         stroke(transitColor);        
+         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
+         popStyle();
+        }
         lastPoint = p;
       } else if (f.z == 2) {
         // Normal
         pushStyle();
         stroke(g.strokeColor, brightnessNormal);        
-        parent.line(p.x, p.y, lastPoint.x, lastPoint.y);
+        parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
         popStyle();
         lastPoint = p;
       } else if (f.z == 3) {
         // Bright
         pushStyle();
         stroke(g.strokeColor, brightnessBright);        
-        parent.line(p.x, p.y, lastPoint.x, lastPoint.y);
+        parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
         popStyle();
         lastPoint = p;
       }
@@ -157,6 +166,12 @@ class VstBuffer extends ArrayList<VstFrame> {
     return super.add(frame);
   }
 
+  public void update() {
+    VstBuffer temp = sort();
+    clear();
+    addAll(temp);
+  }
+  
   public boolean add(int x, int y, int z) {
     int size = size();
     if (size() < LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) {
@@ -186,8 +201,7 @@ class VstBuffer extends ArrayList<VstFrame> {
       buffer[byte_count++] = 0;
 
       // Data
-      VstBuffer sorted = sort();
-      for (VstFrame frame : sorted) {
+      for (VstFrame frame : this) {
         int v = (frame.z & 3) << 22 | (frame.x & 2047) << 11 | (frame.y & 2047) << 0;
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
         buffer[byte_count++] = (byte) ((v >>  8) & 0xFF);
@@ -251,6 +265,13 @@ class VstBuffer extends ArrayList<VstFrame> {
       VstFrame endFrame = src.get(endIndex);
 
       if (reverseOrder) {
+        // Swap commands of first and last segment if in reverse order
+        VstFrame t0 = src.get(startIndex);
+        VstFrame t1 = src.get(endIndex);
+        int temp = t0.z;
+        t0.z = t1.z;
+        t1.z = temp;
+        
         lastFrame = startFrame;
         for (int index = endIndex; index >= startIndex; index--) {
           destination.add(src.get(index));
