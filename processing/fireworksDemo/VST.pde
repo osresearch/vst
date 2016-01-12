@@ -22,7 +22,7 @@ class Vst {
     this(parent);
     buffer.setSerial(serial);
   }
-  
+
   void display() {
     buffer.update();
     displayBuffer();
@@ -97,7 +97,7 @@ class Vst {
   void displayBuffer() {
     PVector lastPoint = new PVector(width / 2.0, height / 2.0);  // Assumes V.st re-centers
     Iterator iter = buffer.iterator();
-    
+
     while (iter.hasNext()) {
       VstFrame f = (VstFrame) iter.next();
       PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
@@ -105,10 +105,10 @@ class Vst {
       if (f.z <= 1) {
         // Transit
         if (displayTransit) {
-         pushStyle();
-         stroke(transitColor);        
-         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-         popStyle();
+          pushStyle();
+          stroke(transitColor);        
+          parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
+          popStyle();
         }
         lastPoint = p;
       } else if (f.z == 2) {
@@ -171,7 +171,7 @@ class VstBuffer extends ArrayList<VstFrame> {
     clear();
     addAll(temp);
   }
-  
+
   public boolean add(int x, int y, int z) {
     int size = size();
     if (size() < LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) {
@@ -271,7 +271,7 @@ class VstBuffer extends ArrayList<VstFrame> {
         int temp = t0.z;
         t0.z = t1.z;
         t1.z = temp;
-        
+
         lastFrame = startFrame;
         for (int index = endIndex; index >= startIndex; index--) {
           destination.add(src.get(index));
