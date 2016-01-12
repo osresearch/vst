@@ -24,7 +24,7 @@ class Firework extends DisplayableBase {
     void update() {
       velocity.add(gravity);
       position.add(velocity);
-      
+
       if (position.x < -sparkSize || position.x >= width + sparkSize || position.y >= height + sparkSize) {
         complete();
       }
