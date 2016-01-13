@@ -4,7 +4,7 @@ import processing.serial.*;
 class Vst {
   color colorNormal = color(0, 80);
   color colorBright = color(0);
-  color colorTransit = color(255, 0, 0);
+  color colorTransit = color(255, 0, 0, 80);
   boolean displayTransit = false;
   VstBuffer buffer;
   private PApplet parent;
@@ -121,7 +121,7 @@ class Vst {
       } else if (f.z == 3) {
         // Bright
         pushStyle();
-        stroke(colorNormal);        
+        stroke(colorBright);        
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
         popStyle();
         lastPoint = p;
