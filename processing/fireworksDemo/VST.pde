@@ -31,7 +31,6 @@ class Vst {
     lastY = -1;
   }
 
-
   void line(boolean bright, float x0, float y0, float x1, float y1) {
     line(bright, new PVector(x0, y0), new PVector(x1, y1));
   }
@@ -49,6 +48,15 @@ class Vst {
     p0 = p0.copy();
     p1 = p1.copy();
 
+    // Create temp versions for modelXY()
+    PVector pt0 = p0.copy();
+    PVector pt1 = p1.copy();
+
+    p0.x = modelX(pt0.x, pt0.y, pt0.z);
+    p0.y = modelY(pt0.x, pt0.y, pt0.z);
+    p1.x = modelX(pt1.x, pt1.y, pt0.z);
+    p1.y = modelY(pt1.x, pt1.y, pt0.z);
+    
     if (!clip.clip(p0, p1)) {
       return;
     }
@@ -68,8 +76,8 @@ class Vst {
   }
 
   void point(int bright, PVector v) {
-    int x = (int) (modelX(v.x, v.y, 0) * 2047 / width);
-    int y = (int) (2047 - (modelY(v.x, v.y, 0) * 2047 / height));
+    int x = (int) (v.x * 2047 / width);
+    int y = (int) (2047 - (v.y * 2047 / height));
 
     if (x == lastX && y == lastY) {
       return;
