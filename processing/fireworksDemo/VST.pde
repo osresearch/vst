@@ -98,35 +98,31 @@ class Vst {
     PVector lastPoint = new PVector(width / 2.0, height / 2.0);  // Assumes V.st re-centers
     Iterator iter = buffer.iterator();
 
+    pushStyle();
     while (iter.hasNext()) {
       VstFrame f = (VstFrame) iter.next();
       PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
 
-      if (f.z <= 1) {
+      if (f.z == 1) {
         // Transit
         if (displayTransit) {
-          pushStyle();
           stroke(colorTransit);        
           parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-          popStyle();
         }
         lastPoint = p;
       } else if (f.z == 2) {
         // Normal
-        pushStyle();
         stroke(colorNormal);        
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-        popStyle();
         lastPoint = p;
       } else if (f.z == 3) {
         // Bright
-        pushStyle();
         stroke(colorBright);        
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-        popStyle();
         lastPoint = p;
       }
     }
+    popStyle();
   }
 
   PVector vstToScreen(VstFrame f) {

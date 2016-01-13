@@ -1,4 +1,4 @@
-Vst vst;
+  Vst vst;
 PVector gravity;
 FireworkManager fireworkManager;
 
@@ -10,12 +10,13 @@ void settings() {
 void setup() {
   vst = new Vst(this, createSerial());
   vst.colorBright = color(64, 255, 64);
-  vst.colorNormal = color(vst.colorNormal, 80);
+  vst.colorNormal = color(64, 255, 64, 80);
+  //vst.colorNormal = color(0, 255, 255);
   //vst.displayTransit = true;
   gravity = new PVector(0, 0.01);
   fireworkManager = new FireworkManager();
   fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(100, 300));
-  frameRate(50);
+  frameRate(10);
   blendMode(ADD);
   strokeWeight(2);
 }
