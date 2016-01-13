@@ -9,16 +9,15 @@ void settings() {
 
 void setup() {
   vst = new Vst(this, createSerial());
-  vst.colorNormal = color(64, 255, 64);
-  vst.colorBright = color(vst.colorNormal, 80);
+  vst.colorBright = color(64, 255, 64);
+  vst.colorNormal = color(vst.colorNormal, 80);
+  //vst.displayTransit = true;
   gravity = new PVector(0, 0.01);
   fireworkManager = new FireworkManager();
   fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(100, 300));
-
   frameRate(50);
   blendMode(ADD);
   strokeWeight(2);
-  //vst.displayTransit = true;
 }
 
 void draw() {
