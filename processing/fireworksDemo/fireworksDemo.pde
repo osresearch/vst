@@ -31,5 +31,4 @@ void draw() {
   fireworkManager.display();
 
   vst.display();
-  vst.colorNormal = color(0, 255, 0);
 }

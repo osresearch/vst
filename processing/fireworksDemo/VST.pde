@@ -4,7 +4,7 @@ import processing.serial.*;
 class Vst {
   color colorNormal = color(0, 80);
   color colorBright = color(0);
-  color colorTransit = color(255, 0, 0, 80);
+  color colorTransit = color(255, 0, 0);
   boolean displayTransit = false;
   VstBuffer buffer;
   private PApplet parent;
