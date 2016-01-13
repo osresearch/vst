@@ -121,7 +121,7 @@ class Vst {
       } else if (f.z == 3) {
         // Bright
         pushStyle();
-        stroke(colorNormal);        
+        stroke(colorBright);        
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
         popStyle();
         lastPoint = p;
