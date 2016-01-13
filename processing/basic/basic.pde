@@ -6,7 +6,7 @@ void settings() {
 }
 
 void setup() {
-  vst = new Vst(this, createSerial());  
+  vst = new Vst(this, createSerial());
   frameRate(50);
 }
 
