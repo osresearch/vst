@@ -51,7 +51,7 @@ class DemoSVG
 				PVector ps1 = PVector.mult(p1, 0.6);
 				ps0.add(new PVector(200,100));
 				ps1.add(new PVector(200,100));
-				vector_line(false, ps0, ps1);
+				line(ps0, ps1);
 			}
 
 			if(start == null)

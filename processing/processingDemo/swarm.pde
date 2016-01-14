@@ -24,15 +24,21 @@ class Particle
 		// adjust the accelerations up to the maximum
 		// add some random noise to ensure that they don't bunch
 		PVector dv = PVector.mult(d, max_a / dist);
-		v = PVector.add(limit(PVector.add(v, dv), -max_v, max_v), random3(-1,-1));
-
+		dv.x += random(-2,2);
+		dv.y += random(-2,2);
+		dv.z += random(-2,2);
+		v.add(dv);
+		v.limit(max_v);
 		p.add(v);
 	}
 
 	void wasp_move()
 	{
 		// wasp is not acceleration limited
-		v = limit(PVector.add(v, random3(-5, 5)), -max_wasp_v, max_wasp_v);
+		v.x += random(-5,5);
+		v.y += random(-5,5);
+		v.z += random(-5,5);
+		v.limit(max_wasp_v);
 
 		// nudge the wasp towards the center of the screen
 		if (p.x < width/2)
@@ -66,7 +72,8 @@ class Particle
 	void draw(boolean bright)
 	{
 		PVector p2 = PVector.sub(p,v);
-		vector_line(bright, p, p2);
+		stroke(bright ? 255 : 100);
+		line(p, p2);
 	}
 };
 

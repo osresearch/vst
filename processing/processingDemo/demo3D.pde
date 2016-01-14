@@ -182,18 +182,19 @@ draw_box()
   PVector v6 = c.project(new PVector(+b,+b,-b));
   PVector v7 = c.project(new PVector(+b,+b,+b));
 
-  vector_line(false, v0, v1);
-  vector_line(false, v0, v2);
-  vector_line(false, v0, v4);
-  vector_line(false, v1, v3);
-  vector_line(false, v1, v5);
-  vector_line(false, v2, v3);
-  vector_line(false, v2, v6);
-  vector_line(false, v3, v7);
-  vector_line(false, v4, v5);
-  vector_line(false, v4, v6);
-  vector_line(false, v5, v7);
-  vector_line(false, v6, v7);
+  stroke(128);
+  line(v0, v1);
+  line(v0, v2);
+  line(v0, v4);
+  line(v1, v3);
+  line(v1, v5);
+  line(v2, v3);
+  line(v2, v6);
+  line(v3, v7);
+  line(v4, v5);
+  line(v4, v6);
+  line(v5, v7);
+  line(v6, v7);
 }
 
 
@@ -236,7 +237,9 @@ draw()
      if (frame_num == count || frame_num == count + 1)
        bright = true;
 
-     vector_line(bright, op, np);
+     stroke(bright ? 255 : 128);
+     line(op, np);
+     ellipse(np.x, np.y, 30, 50);
 
      op = np;
   }

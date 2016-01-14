@@ -22,7 +22,8 @@ void draw() {
 
   for(int i = 0 ; i < segments ; i++)
   {
-    	vector_line(i == head, x0[i], y0[i], x1[i], y1[i]);
+	stroke(head == i ? 255 : 128);
+    	line(x0[i], y0[i], x1[i], y1[i]);
   }
 
   // update the current point

@@ -39,7 +39,7 @@ class Hershey
             float ny = y - (dx * ss + dy * cs) / 16.0;
 
             if (!moveto)
-                vector_line(bright, ox, oy, nx, ny);
+                line(ox, oy, nx, ny);
 
             ox = nx;
             oy = ny;
