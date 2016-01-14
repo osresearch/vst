@@ -267,17 +267,19 @@ class VstBuffer extends ArrayList<VstFrame> {
 
       VstFrame startFrame = src.get(startIndex);
       VstFrame endFrame = src.get(endIndex);
-
+      
       if (reverseOrder) {
-        // Swap commands of first and last segment if in reverse order
-        VstFrame t0 = src.get(startIndex);
-        VstFrame t1 = src.get(endIndex);
-        int temp = t0.z;
-        t0.z = t1.z;
-        t1.z = temp;
-
         lastFrame = startFrame;
         for (int index = endIndex; index >= startIndex; index--) {
+          // Re-arrange transit command
+          VstFrame f0 = src.get(index);
+          int nextIndex = index + 1;
+          nextIndex = nextIndex >= endIndex ? startIndex : nextIndex;
+          VstFrame f1 = src.get(nextIndex);
+          int temp = f0.z;
+          f0.z = f1.z;
+          f1.z = temp;
+          
           destination.add(src.get(index));
         }
       } else {
@@ -286,7 +288,7 @@ class VstBuffer extends ArrayList<VstFrame> {
           destination.add(src.get(index));
         }
       }
-
+      
       src.removeRange(startIndex, endIndex + 1);
     }
 

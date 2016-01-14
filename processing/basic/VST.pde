@@ -56,7 +56,7 @@ class Vst {
     p0.y = modelY(pt0.x, pt0.y, pt0.z);
     p1.x = modelX(pt1.x, pt1.y, pt0.z);
     p1.y = modelY(pt1.x, pt1.y, pt0.z);
-    
+
     if (!clip.clip(p0, p1)) {
       return;
     }
@@ -269,15 +269,17 @@ class VstBuffer extends ArrayList<VstFrame> {
       VstFrame endFrame = src.get(endIndex);
 
       if (reverseOrder) {
-        // Swap commands of first and last segment if in reverse order
-        VstFrame t0 = src.get(startIndex);
-        VstFrame t1 = src.get(endIndex);
-        int temp = t0.z;
-        t0.z = t1.z;
-        t1.z = temp;
-
         lastFrame = startFrame;
         for (int index = endIndex; index >= startIndex; index--) {
+          // Re-arrange transit command
+          VstFrame f0 = src.get(index);
+          int nextIndex = index + 1;
+          nextIndex = nextIndex >= endIndex ? startIndex : nextIndex;
+          VstFrame f1 = src.get(nextIndex);
+          int temp = f0.z;
+          f0.z = f1.z;
+          f1.z = temp;
+
           destination.add(src.get(index));
         }
       } else {
