@@ -14,6 +14,7 @@ void setup() {
   vst = new Vst(this, createSerial());
   vst.colorBright = color(64, 255, 64);
   vst.colorNormal = color(vst.colorBright, 80);
+  vst.displayTransit = true;
   brickManager = new BrickManager();
   ball = new Ball(vst);
   paddle = new Paddle(vst);

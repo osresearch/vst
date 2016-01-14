@@ -20,8 +20,27 @@ class Collision extends DisplayableBase {
     }
 
     // Paddle
-    if (ball.position.y + ball.s >= paddle.position.y && ball.position.y + ball.s < paddle.position.y + paddle.h) {
-      println("foo");
+    //if (ball.position.y + ball.s >= paddle.position.y && ball.position.y + ball.s < paddle.position.y + paddle.h) {
+    //  println("foo");
+    //}
+
+    float paddleHalfWidth = paddle.w / 2.0;
+    float paddleHalfHeight = paddle.h / 2.0;
+    float paddleLeft = paddle.position.x - paddleHalfWidth;
+    float paddleRight = paddle.position.x + paddleHalfWidth;
+
+    if (ball.velocity.y > 0 &&
+      ball.position.x > paddleLeft &&
+      ball.position.x < paddleRight &&
+      ball.position.y > paddle.position.y - paddleHalfHeight &&
+      ball.position.y < paddle.position.y + paddleHalfHeight) {
+      ball.velocity.y *= -1;
+
+      float angleOffset = PI / 8.0;
+      float angle = map(ball.position.x, paddleLeft, paddleRight, -PI + angleOffset, -angleOffset);
+      angle = constrain(angle, -PI + angleOffset, -angleOffset);  
+      ball.velocity = PVector.fromAngle(angle);
+      ball.velocity.mult(8);
     }
   }
 }
