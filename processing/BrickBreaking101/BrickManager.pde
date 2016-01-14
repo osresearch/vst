@@ -1,40 +1,36 @@
-class Brick extends DisplayableBase { //<>//
+class Brick extends DisplayableVst { //<>//
   PVector position;
-  color c = color(255, 128, 180, 80);
 
-  Brick(PVector position) {
+  Brick(Vst vst, PVector position) {
+    super(vst);
     this.position = position;
   }
 
   void display() {
-    pushStyle();
-    fill(c, 64);
-    stroke(c);
-    rect(position.x + 1, position.y + 1, brickManager.w - 2, brickManager.h - 2);
-    popStyle();
+    pushMatrix();
+    rectMode(CORNER);
+    rect(false, position.x + 1, position.y + 1, brickManager.w - 2, brickManager.h - 2);
+    popMatrix();
   }
 
   void complete() {
     super.complete();
-    pushStyle();
-    PVector fw = ball.position.copy();
-    PVector impact = ball.velocity.copy().mult(0.1);
-    fill(255);
-    noStroke();
-    rect(position.x, position.y, brickManager.w, brickManager.h);
-    popStyle();
+    pushMatrix();
+    rectMode(CORNER);
+    rect(true, position.x, position.y, brickManager.w, brickManager.h);
+    popMatrix();
   }
 }
 
 class BrickManager extends DisplayableList<Brick> {
-  int nColumns = 8;
-  int nRows = 8;
+  int nColumns = 10;
+  int nRows = 6;
   float w;
   float h;
 
   BrickManager() {
     w = (width - 1) / (float) nColumns;
-    h = 40;
+    h = 24;
     initBricks();
   }
 
@@ -48,12 +44,8 @@ class BrickManager extends DisplayableList<Brick> {
   void initBricks() {
     for (int y = 0; y < nRows; y++) {
       for (int x = 0; x < nColumns; x++) {
-        Brick brick = new Brick(new PVector(x * w, y * h + 2 * h));
-        pushStyle();
-        colorMode(HSB);
-        brick.c = color((y * 40 + x * 20) % 256, 255, 255);
+        Brick brick = new Brick(vst, new PVector(x * w, y * h + 3 * h));
         this.add(brick);
-        popStyle();
       }
     }
   }

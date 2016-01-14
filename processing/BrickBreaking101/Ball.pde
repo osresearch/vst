@@ -1,13 +1,14 @@
-class Ball extends DisplayableBase {
+class Ball extends DisplayableVst {
   PVector position;
   PVector lastPosition;
   PVector velocity;  
-  float s = 20;
+  float s = 12;
 
-  Ball() {
-    position = new PVector(width / 2.5, height * 0.1);
+  Ball(Vst vst) {
+    super(vst);
+    position = new PVector(width / 2.5, 300);
     lastPosition = position.copy();
-    velocity = PVector.fromAngle(-QUARTER_PI * random(1, 1.5)).mult(12);
+    velocity = PVector.fromAngle(-QUARTER_PI * random(1, 1.5)).mult(8);
   }
 
   void update() {
@@ -16,11 +17,9 @@ class Ball extends DisplayableBase {
   }
 
   void display() {
-    pushStyle();
-    stroke(255);
-    fill(0);
+    pushMatrix();
     rectMode(CENTER);
-    rect(position.x, position.y, s, s);
-    popStyle();
+    rect(true, position.x, position.y, s, s);
+    popMatrix();
   }
 }

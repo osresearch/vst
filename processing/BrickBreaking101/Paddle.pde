@@ -1,21 +1,22 @@
-class Paddle extends DisplayableBase {
+class Paddle extends DisplayableVst {
   PVector position;
-  static final float w = 100;
-  static final float h = 25;
+  float w = 96;
+  float h = 24;
   
-  Paddle() {
+  Paddle(Vst vst) {
+    super(vst);
     position = new PVector(0, 440);
   }
   
   void update() {
-    //position.x = constrain(mouseX, w, (width - 1) - w);    
-    position.x = mouseX;    
+    position.x = constrain(mouseX, w / 2.0, (width - 1) - w / 2.0);    
+    //position.x = mouseX;    
   }
   
   void display() {
-    pushStyle();
-    //rectMode(CENTER);
-    rect(position.x, position.y, w, h);
-    popStyle();
+    pushMatrix();
+    rectMode(CENTER);
+    rect(false, position.x, position.y, w, h);
+    popMatrix();
   }
 }
