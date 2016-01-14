@@ -239,7 +239,6 @@ draw()
 
      stroke(bright ? 255 : 128);
      line(op, np);
-     ellipse(np.x, np.y, 30, 50);
 
      op = np;
   }
