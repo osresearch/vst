@@ -30,9 +30,9 @@ void setup() {
 
     demos = new ArrayList<Demo>();
    
-    //demos.add(new Demo3D());
+    demos.add(new Demo3D());
     demos.add(new SwarmDemo());
-    //demos.add(new QixDemo());
+    demos.add(new QixDemo());
     //demos.add(new SpiralDemo());
 
     d = demos.get(0);
