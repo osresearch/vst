@@ -6,9 +6,9 @@ class Ball extends DisplayableVst {
 
   Ball(Vst vst) {
     super(vst);
-    position = new PVector(width / 2.5, 300);
+    position = new PVector(50, 250);
     lastPosition = position.copy();
-    velocity = PVector.fromAngle(-QUARTER_PI * random(1, 1.5)).mult(8);
+    velocity = PVector.fromAngle(QUARTER_PI * random(1, 1.5)).mult(8);
   }
 
   void update() {

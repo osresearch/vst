@@ -6,8 +6,7 @@ Collision collision;
 
 void settings() {
   size(500, 500, P2D);
-  int d = displayDensity();
-  pixelDensity(d);
+  pixelDensity(displayDensity());
 }
 
 void setup() {  
@@ -26,7 +25,7 @@ void setup() {
 
 void draw() {
   background(0, 24, 0);
-  
+
   // Update
   ball.update();
   paddle.update();
