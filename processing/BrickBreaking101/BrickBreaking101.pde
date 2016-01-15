@@ -5,7 +5,7 @@ Paddle paddle;
 Collision collision;
 
 void settings() {
-  size(500, 500, P2D);
+  size(450, 550, P2D);
   pixelDensity(displayDensity());
 }
 
@@ -14,11 +14,10 @@ void setup() {
 
   // Init Vst
   vst = new Vst(this, createSerial());
-  vst.colorBright = color(64, 255, 64);
-  vst.colorNormal = color(vst.colorBright, 80);
-  vst.displayTransit = true;
+  vst.colorBright = color(220, 220, 255);
+  vst.colorNormal = color(vst.colorBright, 96);
   blendMode(ADD);
-  strokeWeight(2);
+  strokeWeight(1);
 
   // Init Game Objects
   brickManager = new BrickManager();
@@ -28,7 +27,10 @@ void setup() {
 }
 
 void draw() {
-  background(0, 24, 0);
+  background(0);
+  vst.line(false, 0, height - 1, 0, 0);
+  vst.line(false, 0, 0, width - 1, 0);
+  vst.line(false, width - 1, 0, width - 1, height - 1);
 
   // Update Game Objects
   ball.update();
