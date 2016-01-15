@@ -2,7 +2,7 @@ class Collision extends DisplayableBase {
   void update() {
     float halfWidth = ball.s / 2.0;
 
-    // Boundary Collisions
+    // Boundary collisions
     if (ball.position.x < halfWidth) {
       ball.position.x = halfWidth;
       ball.velocity.x *= -1;
@@ -10,7 +10,8 @@ class Collision extends DisplayableBase {
       ball.position.x = width - 1 - halfWidth;
       ball.velocity.x *= -1;
     }
-    // TODO: Handle falling though wall
+
+    // Handle ball falling through floor
     if (ball.position.y < halfWidth) {
       ball.position.y = halfWidth;
       ball.velocity.y *= -1;
@@ -18,11 +19,7 @@ class Collision extends DisplayableBase {
       ball = new Ball(vst);
     }
 
-    // Paddle
-    //if (ball.position.y + ball.s >= paddle.position.y && ball.position.y + ball.s < paddle.position.y + paddle.h) {
-    //  println("foo");
-    //}
-
+    // Ball / paddle Collision
     float paddleHalfWidth = paddle.w / 2.0;
     float paddleHalfHeight = paddle.h / 2.0;
     float paddleLeft = paddle.position.x - paddleHalfWidth;
@@ -39,7 +36,7 @@ class Collision extends DisplayableBase {
       float angle = map(ball.position.x, paddleLeft, paddleRight, -PI + angleOffset, -angleOffset);
       angle = constrain(angle, -PI + angleOffset, -angleOffset);  
       ball.velocity = PVector.fromAngle(angle);
-      ball.velocity.mult(8);
+      ball.velocity.mult(ball.speed);
     }
   }
 }

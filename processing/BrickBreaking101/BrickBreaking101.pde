@@ -10,32 +10,38 @@ void settings() {
 }
 
 void setup() {  
+  frameRate(50);
+
+  // Init Vst
   vst = new Vst(this, createSerial());
   vst.colorBright = color(64, 255, 64);
   vst.colorNormal = color(vst.colorBright, 80);
   vst.displayTransit = true;
+  blendMode(ADD);
+  strokeWeight(2);
+
+  // Init Game Objects
   brickManager = new BrickManager();
   ball = new Ball(vst);
   paddle = new Paddle(vst);
   collision = new Collision();
-  frameRate(50);
-  blendMode(ADD);
-  strokeWeight(2);
 }
 
 void draw() {
   background(0, 24, 0);
 
-  // Update
+  // Update Game Objects
   ball.update();
   paddle.update();
   brickManager.detectBallCollision();
   brickManager.update();
   collision.update();
 
-  // Display
+  // Display Game Objects
   paddle.display();
   brickManager.display();
   ball.display();
+
+  // Send to vector display
   vst.display();
 }

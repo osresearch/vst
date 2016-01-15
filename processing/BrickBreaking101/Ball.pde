@@ -3,12 +3,13 @@ class Ball extends DisplayableVst {
   PVector lastPosition;
   PVector velocity;  
   float s = 12;
+  float speed = 8;
 
   Ball(Vst vst) {
     super(vst);
     position = new PVector(50, 250);
     lastPosition = position.copy();
-    velocity = PVector.fromAngle(QUARTER_PI * random(1, 1.5)).mult(8);
+    velocity = PVector.fromAngle(QUARTER_PI * random(1, 1.5)).mult(speed);
   }
 
   void update() {
