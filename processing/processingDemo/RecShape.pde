@@ -34,7 +34,7 @@ class RecShape {
     for (int i = 0; i < s; i++) {
       PVector p0 = points.get(i);
       PVector p1 = points.get((i + 1) % s);
-      vector_line(bright, p0.x, p0.y, p1.x, p1.y);
+      line(p0.x, p0.y, p1.x, p1.y);
     }
   }
 

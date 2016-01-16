@@ -597,6 +597,21 @@ goto_y(
 #endif
 }
 
+
+static void
+dwell(
+	const int count
+)
+{
+	for (int i = 0 ; i < count ; i++)
+	{
+		if (i & 1)
+			goto_x(x_pos);
+		else
+			goto_y(y_pos);
+	}
+}
+
 static inline void
 brightness(
 	uint16_t bright
@@ -716,20 +731,6 @@ draw_bright(
 	_draw_lineto(x1, y1, BRIGHT_SHIFT);
 }
 
-
-static void
-dwell(
-	const int count
-)
-{
-	for (int i = 0 ; i < count ; i++)
-	{
-		if (i & 1)
-			goto_x(x_pos);
-		else
-			goto_y(y_pos);
-	}
-}
 
 
 void
