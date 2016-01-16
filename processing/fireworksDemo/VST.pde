@@ -54,9 +54,9 @@ class Vst {
 
     p0.x = modelX(pt0.x, pt0.y, pt0.z);
     p0.y = modelY(pt0.x, pt0.y, pt0.z);
-    p1.x = modelX(pt1.x, pt1.y, pt0.z);
-    p1.y = modelY(pt1.x, pt1.y, pt0.z);
-    
+    p1.x = modelX(pt1.x, pt1.y, pt1.z);
+    p1.y = modelY(pt1.x, pt1.y, pt1.z);
+
     if (!clip.clip(p0, p1)) {
       return;
     }
@@ -267,7 +267,7 @@ class VstBuffer extends ArrayList<VstFrame> {
 
       VstFrame startFrame = src.get(startIndex);
       VstFrame endFrame = src.get(endIndex);
-      
+
       if (reverseOrder) {
         lastFrame = startFrame;
         for (int index = endIndex; index >= startIndex; index--) {
@@ -279,7 +279,7 @@ class VstBuffer extends ArrayList<VstFrame> {
           int temp = f0.z;
           f0.z = f1.z;
           f1.z = temp;
-          
+
           destination.add(src.get(index));
         }
       } else {
@@ -288,7 +288,7 @@ class VstBuffer extends ArrayList<VstFrame> {
           destination.add(src.get(index));
         }
       }
-      
+
       src.removeRange(startIndex, endIndex + 1);
     }
 

@@ -54,8 +54,8 @@ class Vst {
 
     p0.x = modelX(pt0.x, pt0.y, pt0.z);
     p0.y = modelY(pt0.x, pt0.y, pt0.z);
-    p1.x = modelX(pt1.x, pt1.y, pt0.z);
-    p1.y = modelY(pt1.x, pt1.y, pt0.z);
+    p1.x = modelX(pt1.x, pt1.y, pt1.z);
+    p1.y = modelY(pt1.x, pt1.y, pt1.z);
 
     if (!clip.clip(p0, p1)) {
       return;
