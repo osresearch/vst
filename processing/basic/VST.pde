@@ -9,6 +9,7 @@ class Vst {
   VstBuffer buffer;
   private PApplet parent;
   private Clipping clip;
+  private VstPoint lastPoint;
   private int lastX;
   private int lastY;
 
@@ -16,6 +17,7 @@ class Vst {
     this.parent = parent;
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
     buffer = new VstBuffer();
+    lastPoint = new VstPoint(-1, -1);
   }
 
   Vst(PApplet parent, Serial serial) {
@@ -27,7 +29,8 @@ class Vst {
     buffer.update();
     displayBuffer();
     buffer.send();
-    lastX = -1;       // TODO: Better choice for resetting lastX and lastY?
+    lastPoint = new VstPoint(-1, -1); // TODO: Better choice for resetting lastX and lastY?
+    lastX = -1;       
     lastY = -1;
   }
 
@@ -80,16 +83,13 @@ class Vst {
   }
 
   void point(int bright, PVector v) {
-    int x = (int) (v.x * 2047 / width);
-    int y = (int) (2047 - (v.y * 2047 / height));
-
-    if (x == lastX && y == lastY) {
+    VstPoint point = new VstPoint((int) (v.x * 2047 / width), (int) (2047 - (v.y * 2047 / height)), bright);
+    
+    if (point.x == lastPoint.x && point.y == lastPoint.y) {
       return;
     }
-
-    lastX = x;
-    lastY = y;
-    buffer.add(x, y, bright);
+    
+    buffer.add(point.copy());
   }
 
   void rect(boolean bright, float x, float y, float w, float h) {
@@ -108,46 +108,58 @@ class Vst {
 
   void displayBuffer() {
     PVector lastPoint = new PVector(width / 2.0, height / 2.0);  // Assumes V.st re-centers
-    Iterator iter = buffer.iterator();
 
     pushStyle();
-    while (iter.hasNext()) {
-      VstFrame f = (VstFrame) iter.next();
-      PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
+    Iterator it = buffer.iterator();
+    while (it.hasNext()) {
+      VstPoint v = (VstPoint) it.next();
+      PVector p = new PVector((float) (v.x / 2047.0) * width, (float) ((2047 - v.y) / 2047.0) * height);
 
-      if (f.z == 1 && displayTransit) {                   // Transit
+      if (v.z == 1 && displayTransit) {                   // Transit
         stroke(colorTransit);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-      } else if (f.z == 2) {                              // Normal
+      } else if (v.z == 2) {                              // Normal
         stroke(colorNormal);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-      } else if (f.z == 3) {                              // Bright
+      } else if (v.z == 3) {                              // Bright
         stroke(colorBright);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
       }
+      
       lastPoint = p;
     }
+    
     popStyle();
   }
 
-  PVector vstToScreen(VstFrame f) {
+  PVector vstToScreen(VstPoint f) {
     return new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
   }
 }
 
-class VstFrame {
-  int x;
-  int y;
-  int z;
-
-  VstFrame(int x, int y, int z) {
-    this.x = x;
-    this.y = y;
-    this.z = z;
+class VstPoint {
+  Integer x;
+  Integer y;
+  Integer z;
+  
+  VstPoint(Integer x, Integer y) {
+   this.x = x;
+   this.y = y;
+   z = 0;
+  }
+  
+  VstPoint(Integer x, Integer y, Integer z) {
+   this.x = x;
+   this.y = y;
+   this.z = z;
+  }
+  
+  VstPoint copy() {
+    return new VstPoint(x, y, z);
   }
 }
 
-class VstBuffer extends ArrayList<VstFrame> {
+class VstBuffer extends ArrayList<VstPoint> {
   private final static int LENGTH = 8192;
   private final static int HEADER_LENGTH = 4;
   private final static int TAIL_LENGTH = 3;
@@ -160,11 +172,11 @@ class VstBuffer extends ArrayList<VstFrame> {
   }
 
   @Override
-    public boolean add(VstFrame frame) {
+    public boolean add(VstPoint vector) {
     if (this.size() > MAX_FRAMES) {
       throw new UnsupportedOperationException("VstBuffer at capacity. Vector discarded.");
     }
-    return super.add(frame);
+    return super.add(vector);
   }
 
   public void update() {
@@ -172,15 +184,15 @@ class VstBuffer extends ArrayList<VstFrame> {
     clear();
     addAll(temp);
   }
-
+  
   public boolean add(int x, int y, int z) {
     int size = size();
     if (size() < LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) {
       // If consecutive z values are zero, replace last to avoid transit redundancy
       if (z == 0 && size > 0 && get(size - 1).z == 0) {
-        this.set(size() - 1, new VstFrame(x, y, z));
+        this.set(size() - 1, new VstPoint(x, y, z));
       } else {
-        add(new VstFrame(x, y, z));
+        add(new VstPoint(x, y, z));
       }
       return true;
     }
@@ -202,10 +214,10 @@ class VstBuffer extends ArrayList<VstFrame> {
       buffer[byte_count++] = 0;
 
       // Data
-      for (VstFrame frame : this) {
-        int v = (frame.z & 3) << 22 | (frame.x & 2047) << 11 | (frame.y & 2047) << 0;
+      for (VstPoint vector : this) {
+        int v = (vector.z & 3) << 22 | (vector.x & 2047) << 11 | (vector.y & 2047) << 0;
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
-        buffer[byte_count++] = (byte) ((v >>  8) & 0xFF);
+        buffer[byte_count++] = (byte) ((v >> 8) & 0xFF);
         buffer[byte_count++] = (byte) (v & 0xFF);
       }
 
@@ -225,13 +237,13 @@ class VstBuffer extends ArrayList<VstFrame> {
     VstBuffer destination = new VstBuffer();      
     VstBuffer src = (VstBuffer) clone();
 
-    VstFrame lastFrame = new VstFrame(1024, 1024, 0);
-    VstFrame nearestFrame = lastFrame;
+    VstPoint lastFrame = new VstPoint(1024, 1024, 0);
+    VstPoint nearestFrame = lastFrame;
 
     while (!src.isEmpty()) {
       int startIndex = 0;
       int endIndex = 0;
-      float nearestDistance = 100000;
+      float nearestDistance = Integer.MAX_VALUE;
       int i = 0;
       boolean reverseOrder = false;
 
@@ -241,8 +253,8 @@ class VstBuffer extends ArrayList<VstFrame> {
           j++;
         }
 
-        VstFrame startFrame = src.get(i);
-        VstFrame endFrame = src.get(j);    // j = index of inclusive right boundary
+        VstPoint startFrame = src.get(i);
+        VstPoint endFrame = src.get(j);    // j = index of inclusive right boundary
         float startDistance = dist(lastFrame.x, lastFrame.y, startFrame.x, startFrame.y);
         float endDistance = dist(lastFrame.x, lastFrame.y, endFrame.x, endFrame.y);
 
@@ -262,17 +274,17 @@ class VstBuffer extends ArrayList<VstFrame> {
         i = j + 1;
       }
 
-      VstFrame startFrame = src.get(startIndex);
-      VstFrame endFrame = src.get(endIndex);
+      VstPoint startFrame = src.get(startIndex);
+      VstPoint endFrame = src.get(endIndex);
 
       if (reverseOrder) {
         lastFrame = startFrame;
         for (int index = endIndex; index >= startIndex; index--) {
           // Re-arrange transit command
-          VstFrame f0 = src.get(index);
+          VstPoint f0 = src.get(index);
           int nextIndex = index + 1;
           nextIndex = nextIndex >= endIndex ? startIndex : nextIndex;
-          VstFrame f1 = src.get(nextIndex);
+          VstPoint f1 = src.get(nextIndex);
           int temp = f0.z;
           f0.z = f1.z;
           f1.z = temp;
@@ -292,10 +304,10 @@ class VstBuffer extends ArrayList<VstFrame> {
     return destination;
   }
 
-  float measureTransitDistance(ArrayList<VstFrame> fList) {
+  float measureTransitDistance(ArrayList<VstPoint> fList) {
     float distance = 0.0;
-    VstFrame last = new VstFrame(1024, 1024, 0);
-    for (VstFrame f : fList) {
+    VstPoint last = new VstPoint(1024, 1024, 0);
+    for (VstPoint f : fList) {
       distance += dist(f.x, f.y, last.x, last.y);
       last = f;
     }
