@@ -117,14 +117,14 @@ class Vst {
 
       if (f.z == 1) {           // Transit
         if (displayTransit) {
-         stroke(colorTransit);
+          stroke(colorTransit);
         } else {
-         noStroke();
+          noStroke();
         }
       } else if (f.z == 2) {    // Normal
-        stroke(colorNormal);        
+        stroke(colorNormal);
       } else if (f.z == 3) {    // Bright
-        stroke(colorBright);        
+        stroke(colorBright);
       }
       parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
       lastPoint = p;
