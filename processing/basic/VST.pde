@@ -35,6 +35,10 @@ class Vst {
     line(bright, new PVector(x0, y0), new PVector(x1, y1));
   }
 
+  void line(boolean bright, float x0, float y0, float z0, float x1, float y1, float z1) {
+    line(bright, new PVector(x0, y0, z0), new PVector(x1, y1, z1));
+  }
+
   void line(boolean bright, PVector p0, PVector p1) {
     if (p0 == null || p1 == null) {
       return;
@@ -48,7 +52,7 @@ class Vst {
     p0 = p0.copy();
     p1 = p1.copy();
 
-    // Create temp versions for modelXY()
+    // Create temp versions for modelXYZ()
     PVector pt0 = p0.copy();
     PVector pt1 = p1.copy();
 
