@@ -30,8 +30,8 @@
 #include "asteroids_font.h"
 #endif
 
-#define CONFIG_VECTREX
-//#define CONFIG_VECTORSCOPE
+//#define CONFIG_VECTREX
+#define CONFIG_VECTORSCOPE
 
 // If you just want a scope clock,
 // solder a 32.768 KHz crystal to the teensy and provide a backup
@@ -39,8 +39,8 @@
 #undef CONFIG_CLOCK
 
 // Sometimes the X and Y need to be flipped and/or swapped
-#define FLIP_X
-#define FLIP_Y
+#undef FLIP_X
+#undef FLIP_Y
 #undef SWAP_XY
 
 // How often should a frame be drawn if we haven't receivded any serial
@@ -454,7 +454,7 @@ draw_test_pattern()
 #ifdef CONFIG_VECTREX
 	draw_string("VECTREX", 1100, y, 3); y -= line_size;
 #else
-	draw_string("Vectoscope", 1100, y, 3); y -= line_size;
+	draw_string("Vectorscope", 1100, y, 3); y -= line_size;
 #endif
 #ifdef FLIP_X
 	draw_string("FLIP_X", 1100, y, 3); y -= line_size;
