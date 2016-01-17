@@ -10,8 +10,6 @@ class Vst {
   private PApplet parent;
   private Clipping clip;
   private VstPoint lastPoint;
-  private int lastX;
-  private int lastY;
 
   Vst(PApplet parent) {
     this.parent = parent;
@@ -29,9 +27,7 @@ class Vst {
     buffer.update();
     displayBuffer();
     buffer.send();
-    lastPoint = new VstPoint(-1, -1); // TODO: Better choice for resetting lastX and lastY?
-    lastX = -1;       
-    lastY = -1;
+    lastPoint = new VstPoint(-1, -1); // TODO: Better choice for resetting lastPoint?
   }
 
   void line(boolean bright, float x0, float y0, float x1, float y1) {
@@ -163,7 +159,7 @@ class VstBuffer extends ArrayList<VstPoint> {
   private final static int LENGTH = 8192;
   private final static int HEADER_LENGTH = 4;
   private final static int TAIL_LENGTH = 3;
-  private final static int MAX_FRAMES = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 3;
+  private final static int MAX_POINTS = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 3;
   private final byte[] buffer = new byte[LENGTH];
   private Serial serial;
 
@@ -172,11 +168,11 @@ class VstBuffer extends ArrayList<VstPoint> {
   }
 
   @Override
-    public boolean add(VstPoint vector) {
-    if (this.size() > MAX_FRAMES) {
+    public boolean add(VstPoint point) {
+    if (this.size() > MAX_POINTS) {
       throw new UnsupportedOperationException("VstBuffer at capacity. Vector discarded.");
     }
-    return super.add(vector);
+    return super.add(point);
   }
 
   public void update() {
@@ -214,8 +210,8 @@ class VstBuffer extends ArrayList<VstPoint> {
       buffer[byte_count++] = 0;
 
       // Data
-      for (VstPoint vector : this) {
-        int v = (vector.z & 3) << 22 | (vector.x & 2047) << 11 | (vector.y & 2047) << 0;
+      for (VstPoint point : this) {
+        int v = (point.z & 3) << 22 | (point.x & 2047) << 11 | (point.y & 2047) << 0;
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 8) & 0xFF);
         buffer[byte_count++] = (byte) (v & 0xFF);
