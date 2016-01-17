@@ -115,24 +115,19 @@ class Vst {
       VstFrame f = (VstFrame) iter.next();
       PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
 
-      if (f.z == 1) {
-        // Transit
+      if (f.z == 1) {           // Transit
         if (displayTransit) {
-          stroke(colorTransit);        
-          parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
+         stroke(colorTransit);
+        } else {
+         noStroke();
         }
-        lastPoint = p;
-      } else if (f.z == 2) {
-        // Normal
+      } else if (f.z == 2) {    // Normal
         stroke(colorNormal);        
-        parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-        lastPoint = p;
-      } else if (f.z == 3) {
-        // Bright
+      } else if (f.z == 3) {    // Bright
         stroke(colorBright);        
-        parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-        lastPoint = p;
       }
+      parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
+      lastPoint = p;
     }
     popStyle();
   }
