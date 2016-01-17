@@ -11,3 +11,19 @@ to see the different patterns.
 
 The recursive spiral art demo is by Jacob Joaquin and
 demonstrates a class to create replicated shapes.
+
+## For vi users:
+
+To the tab key to create 2 spaces (to make processing-IDE-friendly
+code), add the following to the top of each .pde file:
+
+```c
+// vim: set ts=2 expandtab:
+````
+
+And then add the following line to your .vimrc or .exrc, whichever
+you use:
+
+```
+:set modelines=1 
+```
