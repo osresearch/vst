@@ -75,17 +75,85 @@ class Vst {
   }
 
   boolean vectorOffscreen(float x, float y) {
-    return (x < 0 || x >= width || y < 0 || y >= height);
+    return x < 0 || x >= width || y < 0 || y >= height;
   }
 
   void point(int bright, PVector v) {
     VstPoint point = new VstPoint((int) (v.x * 2047 / width), (int) (2047 - (v.y * 2047 / height)), bright);
+
+    if (!point.equals(lastPoint)) {
+      buffer.add(point.clone());
+    }
+  }
+
+
+  class ShapePoint {
+    float x;
+    float y;
+    float z;
+    boolean bright;
     
-    if (point.x == lastPoint.x && point.y == lastPoint.y) {
+    ShapePoint(boolean bright, float x, float y, float z) {
+      this.bright = bright;
+      this.x = x;
+      this.y = y;
+      this.z = z;
+    }
+  }
+  
+  private ArrayList<ShapePoint> shapeList;
+
+  void beginShape() {
+    shapeList = new ArrayList<ShapePoint>();
+  }
+
+  void vertex(boolean bright, PVector p) {
+    shapeList.add(new ShapePoint(bright, p.x, p.y, p.z));
+  }
+
+  void vertex(boolean bright, float x, float y) {
+    vertex(bright, new PVector(x, y, 0));
+  }
+
+  void vertex(boolean bright, float x, float y, float z) {
+    vertex(bright, new PVector(x, y, z));
+  }
+
+  void endShape() {
+    endShape(-1);
+  }
+
+  void endShape(int mode) {
+    int size = shapeList.size();
+    if (size <= 1) {
       return;
     }
-    
-    buffer.add(point.copy());
+    ShapePoint p0 = shapeList.get(0);
+    if (mode == CLOSE && size > 2) {
+      ShapePoint p1 = shapeList.get(size - 1);
+      line(p1.bright, p1.x, p1.y, p0.x, p0.y);
+    }
+    for (int i = 1; i < size; i++) {
+      ShapePoint p1 = shapeList.get(i);
+      line(p1.bright, p0.x, p0.y, p1.x, p1.y);
+      p0 = p1;
+    }
+    shapeList.clear();
+  }
+
+
+  // Requires implementation of beginShape() type functionality
+  void ellipse(boolean bright, float x, float y, float w, float h) {
+    ellipse(bright, x, y, w, h, 32);
+  }
+
+  void ellipse(boolean bright, float x, float y, float w, float h, int nSides) {
+    beginShape();
+    for (int i = 0; i < nSides; i++) {
+      float a = i / (float) nSides * TAU;
+      vertex(bright, x + cos(a) * w * 0.5, y + sin(a) * h * 0.5);
+    }
+    endShape(CLOSE);
   }
 
   void rect(boolean bright, float x, float y, float w, float h) {
@@ -121,10 +189,10 @@ class Vst {
         stroke(colorBright);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
       }
-      
+
       lastPoint = p;
     }
-    
+
     popStyle();
   }
 
@@ -137,21 +205,25 @@ class VstPoint {
   Integer x;
   Integer y;
   Integer z;
-  
+
   VstPoint(Integer x, Integer y) {
-   this.x = x;
-   this.y = y;
-   z = 0;
+    this.x = x;
+    this.y = y;
+    z = 0;
   }
-  
+
   VstPoint(Integer x, Integer y, Integer z) {
-   this.x = x;
-   this.y = y;
-   this.z = z;
+    this.x = x;
+    this.y = y;
+    this.z = z;
   }
-  
-  VstPoint copy() {
+
+  VstPoint clone() {
     return new VstPoint(x, y, z);
+  }
+
+  boolean equals(VstPoint point) {
+    return this.x == point.x && this.y == point.y && this.z == point.z;
   }
 }
 
@@ -163,6 +235,12 @@ class VstBuffer extends ArrayList<VstPoint> {
   private final byte[] buffer = new byte[LENGTH];
   private Serial serial;
 
+  public void update() {
+    VstBuffer temp = sort();
+    clear();
+    addAll(temp);
+  }
+
   public void setSerial(Serial serial) {
     this.serial = serial;
   }
@@ -170,37 +248,20 @@ class VstBuffer extends ArrayList<VstPoint> {
   @Override
     public boolean add(VstPoint point) {
     if (this.size() > MAX_POINTS) {
-      throw new UnsupportedOperationException("VstBuffer at capacity. Vector discarded.");
-    }
-    return super.add(point);
-  }
-
-  public void update() {
-    VstBuffer temp = sort();
-    clear();
-    addAll(temp);
-  }
-  
-  public boolean add(int x, int y, int z) {
-    int size = size();
-    if (size() < LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) {
+      //throw new UnsupportedOperationException("VstBuffer at capacity. Vector discarded.");
+      return false;
+    } else if (point.z == 0 && size() > 0 && get(size() - 1).z == 0) {
       // If consecutive z values are zero, replace last to avoid transit redundancy
-      if (z == 0 && size > 0 && get(size - 1).z == 0) {
-        this.set(size() - 1, new VstPoint(x, y, z));
-      } else {
-        add(new VstPoint(x, y, z));
-      }
-      return true;
-    }
-    return false;
+      // TODO: Maybe this should be done during sorting / cleanup phase instead of pre-optimizing?
+      this.set(size() - 1, point);
+    } else {
+      super.add(point);
+    }    
+    return true;
   }
 
   public void send() {
-    if (isEmpty()) {
-      return;
-    }
-
-    if (serial != null) {
+    if (!isEmpty() && serial != null) {
       int byte_count = 0;
 
       // Header
@@ -233,8 +294,8 @@ class VstBuffer extends ArrayList<VstPoint> {
     VstBuffer destination = new VstBuffer();      
     VstBuffer src = (VstBuffer) clone();
 
-    VstPoint lastFrame = new VstPoint(1024, 1024, 0);
-    VstPoint nearestFrame = lastFrame;
+    VstPoint lastPoint = new VstPoint(1024, 1024, 0);
+    VstPoint nearestPoint = lastPoint;
 
     while (!src.isEmpty()) {
       int startIndex = 0;
@@ -249,32 +310,32 @@ class VstBuffer extends ArrayList<VstPoint> {
           j++;
         }
 
-        VstPoint startFrame = src.get(i);
-        VstPoint endFrame = src.get(j);    // j = index of inclusive right boundary
-        float startDistance = dist(lastFrame.x, lastFrame.y, startFrame.x, startFrame.y);
-        float endDistance = dist(lastFrame.x, lastFrame.y, endFrame.x, endFrame.y);
+        VstPoint startPoint = src.get(i);
+        VstPoint endPoint = src.get(j);    // j = index of inclusive right boundary
+        float startDistance = dist(lastPoint.x, lastPoint.y, startPoint.x, startPoint.y);
+        float endDistance = dist(lastPoint.x, lastPoint.y, endPoint.x, endPoint.y);
 
         if (startDistance < nearestDistance) {
           startIndex = i;
           endIndex = j;
           nearestDistance = startDistance;
-          nearestFrame = startFrame;
+          nearestPoint = startPoint;
         }
-        if (!startFrame.equals(endFrame) && endDistance < nearestDistance) {
+        if (!startPoint.equals(endPoint) && endDistance < nearestDistance) {
           startIndex = i;
           endIndex = j;
           nearestDistance = endDistance;
-          nearestFrame = endFrame;
+          nearestPoint = endPoint;
           reverseOrder = true;
         }        
         i = j + 1;
       }
 
-      VstPoint startFrame = src.get(startIndex);
-      VstPoint endFrame = src.get(endIndex);
+      VstPoint startPoint = src.get(startIndex);
+      VstPoint endPoint = src.get(endIndex);
 
       if (reverseOrder) {
-        lastFrame = startFrame;
+        lastPoint = startPoint;
         for (int index = endIndex; index >= startIndex; index--) {
           // Re-arrange transit command
           VstPoint f0 = src.get(index);
@@ -288,7 +349,7 @@ class VstBuffer extends ArrayList<VstPoint> {
           destination.add(src.get(index));
         }
       } else {
-        lastFrame = endFrame;
+        lastPoint = endPoint;
         for (int index = startIndex; index <= endIndex; index++) {
           destination.add(src.get(index));
         }
