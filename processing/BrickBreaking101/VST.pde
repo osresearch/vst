@@ -10,6 +10,8 @@ class Vst {
   private PApplet parent;
   private Clipping clip;
   private VstPoint lastPoint;
+  private ArrayList<ShapePoint> shapeList;  // For beginShape(), vertex(), endShape, etc..
+  private final int shapeNSidesDefault = 32;
 
   Vst(PApplet parent) {
     this.parent = parent;
@@ -92,7 +94,7 @@ class Vst {
     float y;
     float z;
     boolean bright;
-    
+
     ShapePoint(boolean bright, float x, float y, float z) {
       this.bright = bright;
       this.x = x;
@@ -100,8 +102,6 @@ class Vst {
       this.z = z;
     }
   }
-  
-  private ArrayList<ShapePoint> shapeList;
 
   void beginShape() {
     shapeList = new ArrayList<ShapePoint>();
@@ -141,17 +141,26 @@ class Vst {
     shapeList.clear();
   }
 
+  void ellipse(boolean bright, PVector p, float w, float h) {
+    ellipse(bright, p.x, p.y, w, h, shapeNSidesDefault);
+  }
 
-  // Requires implementation of beginShape() type functionality
   void ellipse(boolean bright, float x, float y, float w, float h) {
-    ellipse(bright, x, y, w, h, 32);
+    ellipse(bright, x, y, w, h, shapeNSidesDefault);
   }
 
   void ellipse(boolean bright, float x, float y, float w, float h, int nSides) {
+    w *= 0.5;
+    h *= 0.5;
+    // Default is CENTER mode
+    if (g.ellipseMode == CORNER) {
+      x -= w;
+      y -= h;
+    }
     beginShape();
     for (int i = 0; i < nSides; i++) {
       float a = i / (float) nSides * TAU;
-      vertex(bright, x + cos(a) * w * 0.5, y + sin(a) * h * 0.5);
+      vertex(bright, x + cos(a) * w, y + sin(a) * h);
     }
     endShape(CLOSE);
   }
