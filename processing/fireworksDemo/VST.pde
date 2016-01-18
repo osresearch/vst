@@ -12,7 +12,8 @@ class Vst {
   private VstPoint lastPoint;
   private ArrayList<ShapePoint> shapeList;  // For beginShape(), vertex(), endShape, etc..
   private final int shapeNSidesDefault = 32;
-
+  private boolean overload = true;
+  
   Vst(PApplet parent) {
     this.parent = parent;
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
@@ -32,15 +33,15 @@ class Vst {
     lastPoint = new VstPoint(-1, -1); // TODO: Better choice for resetting lastPoint?
   }
 
-  void line(boolean bright, float x0, float y0, float x1, float y1) {
-    line(bright, new PVector(x0, y0), new PVector(x1, y1));
+  void line(float x0, float y0, float x1, float y1) {
+    line(new PVector(x0, y0), new PVector(x1, y1));
   }
 
-  void line(boolean bright, float x0, float y0, float z0, float x1, float y1, float z1) {
-    line(bright, new PVector(x0, y0, z0), new PVector(x1, y1, z1));
+  void line(float x0, float y0, float z0, float x1, float y1, float z1) {
+    line(new PVector(x0, y0, z0), new PVector(x1, y1, z1));
   }
 
-  void line(boolean bright, PVector p0, PVector p1) {
+  void line(PVector p0, PVector p1) {
     if (p0 == null || p1 == null) {
       return;
     }
@@ -73,7 +74,20 @@ class Vst {
     }
 
     point(1, p0);
-    point(bright ? 3 : 2, p1);
+    float bright = strokeToBrightness(g.strokeColor);    
+    if (bright == 2 || bright == 3) {  
+      point(bright == 2 ? 2 : 3, p1);
+    }
+  }
+
+  private int strokeToBrightness(color c) {
+    float bright = brightness(c);
+    if (bright >= 1 && bright < 128) {  
+      return 2;
+    } else if (bright >= 128) {
+      return 3;
+    }
+    return 0;
   }
 
   boolean vectorOffscreen(float x, float y) {
@@ -88,18 +102,29 @@ class Vst {
     }
   }
 
-
   class ShapePoint {
     float x;
     float y;
     float z;
-    boolean bright;
+    color c;
 
-    ShapePoint(boolean bright, float x, float y, float z) {
-      this.bright = bright;
+    ShapePoint(float x, float y, float z) {
       this.x = x;
       this.y = y;
       this.z = z;
+      c = g.strokeColor;
+      //println(brightness(c));
+    }
+
+    ShapePoint(float x, float y, float z, color c) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+      this.c = c;
+    }
+
+    ShapePoint copy() {
+      return new ShapePoint(x, y, z, c);
     }
   }
 
@@ -107,16 +132,16 @@ class Vst {
     shapeList = new ArrayList<ShapePoint>();
   }
 
-  void vertex(boolean bright, PVector p) {
-    shapeList.add(new ShapePoint(bright, p.x, p.y, p.z));
+  void vertex(PVector p) {
+    shapeList.add(new ShapePoint(p.x, p.y, p.z));
   }
 
-  void vertex(boolean bright, float x, float y) {
-    vertex(bright, new PVector(x, y, 0));
+  void vertex(float x, float y) {
+    vertex(new PVector(x, y, 0));
   }
 
-  void vertex(boolean bright, float x, float y, float z) {
-    vertex(bright, new PVector(x, y, z));
+  void vertex(float x, float y, float z) {
+    vertex(new PVector(x, y, z));
   }
 
   void endShape() {
@@ -129,53 +154,62 @@ class Vst {
       return;
     }
     ShapePoint p0 = shapeList.get(0);
-    if (mode == CLOSE && size > 2) {
-      ShapePoint p1 = shapeList.get(size - 1);
-      line(p1.bright, p1.x, p1.y, p0.x, p0.y);
+    pushStyle();
+      if (mode == CLOSE && size > 2) {
+      ShapePoint p1 = shapeList.get(size - 1).copy();
+      stroke(g.strokeColor);
+      line(p1.x, p1.y, p0.x, p0.y);
     }
     for (int i = 1; i < size; i++) {
       ShapePoint p1 = shapeList.get(i);
-      line(p1.bright, p0.x, p0.y, p1.x, p1.y);
+
+      stroke(p0.c);
+      line(p0.x, p0.y, p1.x, p1.y);
+
       p0 = p1;
     }
+    popStyle();
     shapeList.clear();
   }
 
-  void ellipse(boolean bright, PVector p, float w, float h) {
-    ellipse(bright, p.x, p.y, w, h, shapeNSidesDefault);
+  void ellipse(PVector p, float w, float h) {
+    ellipse(p.x, p.y, w, h, shapeNSidesDefault);
   }
 
-  void ellipse(boolean bright, float x, float y, float w, float h) {
-    ellipse(bright, x, y, w, h, shapeNSidesDefault);
+  void ellipse(float x, float y, float w, float h) {
+    ellipse(x, y, w, h, shapeNSidesDefault);
   }
 
-  void ellipse(boolean bright, float x, float y, float w, float h, int nSides) {
+  void ellipse(float x, float y, float w, float h, int nSides) {
     w *= 0.5;
     h *= 0.5;
     // Default is CENTER mode
     if (g.ellipseMode == CORNER) {
-      x -= w;
-      y -= h;
+      x += w;
+      y += h;
     }
+    pushStyle();
+    stroke(g.strokeColor);
     beginShape();
     for (int i = 0; i < nSides; i++) {
       float a = i / (float) nSides * TAU;
-      vertex(bright, x + cos(a) * w, y + sin(a) * h);
+      vertex(x + cos(a) * w, y + sin(a) * h);
     }
     endShape(CLOSE);
+    popStyle();
   }
 
-  void rect(boolean bright, float x, float y, float w, float h) {
+  void rect(float x, float y, float w, float h) {
     pushMatrix();
     translate(x, y);    
     // Default is CORNER mode
     if (g.rectMode == CENTER) {
       translate(-w / 2.0, -h / 2.0);
     }
-    line(bright, 0, 0, w, 0);
-    line(bright, w, 0, w, h);
-    line(bright, w, h, 0, h);
-    line(bright, 0, h, 0, 0);
+    line(0, 0, w, 0);
+    line(w, 0, w, h);
+    line(w, h, 0, h);
+    line(0, h, 0, 0);
     popMatrix();
   }
 
@@ -184,6 +218,7 @@ class Vst {
 
     pushStyle();
     Iterator it = buffer.iterator();
+    overload = false;
     while (it.hasNext()) {
       VstPoint v = (VstPoint) it.next();
       PVector p = new PVector((float) (v.x / 2047.0) * width, (float) ((2047 - v.y) / 2047.0) * height);
@@ -203,6 +238,7 @@ class Vst {
     }
 
     popStyle();
+    overload = true;
   }
 
   PVector vstToScreen(VstPoint f) {
