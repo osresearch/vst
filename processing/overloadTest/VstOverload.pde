@@ -1,8 +1,8 @@
-void line(float x, float y, float w, float h) {
+void line(float x0, float y0, float x1, float y1) {
   if (vst.overload) {
-    vst.line(x, y, w, h);
+    vst.line(x0, y0, x1, y1);
   } else {
-    super.line(x, y, w, h);
+    super.line(x0, y0, x1, y1);
   }
 }
 
