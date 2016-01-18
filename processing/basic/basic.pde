@@ -18,6 +18,8 @@ void draw() {
   vst.rect(false, 0, 0, width - 1, height - 1);
   rectMode(CENTER);
   vst.rect(false, width / 2.0, height / 2.0, 250, 250);
-  vst.rect(true, mouseX, mouseY, 20, 20);  
+  vst.rect(true, mouseX, mouseY, 20, 20);
+  vst.ellipse(false, 250, 250, 100, 100);
+  vst.ellipse(true, 250, 250, 100, 50);
   vst.display();
 }

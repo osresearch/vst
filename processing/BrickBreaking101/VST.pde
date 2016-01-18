@@ -75,17 +75,85 @@ class Vst {
   }
 
   boolean vectorOffscreen(float x, float y) {
-    return (x < 0 || x >= width || y < 0 || y >= height);
+    return x < 0 || x >= width || y < 0 || y >= height;
   }
 
   void point(int bright, PVector v) {
     VstPoint point = new VstPoint((int) (v.x * 2047 / width), (int) (2047 - (v.y * 2047 / height)), bright);
 
-    if (point.x == lastPoint.x && point.y == lastPoint.y) {
+    if (!point.equals(lastPoint)) {
+      buffer.add(point.clone());
+    }
+  }
+
+
+  class ShapePoint {
+    float x;
+    float y;
+    float z;
+    boolean bright;
+    
+    ShapePoint(boolean bright, float x, float y, float z) {
+      this.bright = bright;
+      this.x = x;
+      this.y = y;
+      this.z = z;
+    }
+  }
+  
+  private ArrayList<ShapePoint> shapeList;
+
+  void beginShape() {
+    shapeList = new ArrayList<ShapePoint>();
+  }
+
+  void vertex(boolean bright, PVector p) {
+    shapeList.add(new ShapePoint(bright, p.x, p.y, p.z));
+  }
+
+  void vertex(boolean bright, float x, float y) {
+    vertex(bright, new PVector(x, y, 0));
+  }
+
+  void vertex(boolean bright, float x, float y, float z) {
+    vertex(bright, new PVector(x, y, z));
+  }
+
+  void endShape() {
+    endShape(-1);
+  }
+
+  void endShape(int mode) {
+    int size = shapeList.size();
+    if (size <= 1) {
       return;
     }
+    ShapePoint p0 = shapeList.get(0);
+    if (mode == CLOSE && size > 2) {
+      ShapePoint p1 = shapeList.get(size - 1);
+      line(p1.bright, p1.x, p1.y, p0.x, p0.y);
+    }
+    for (int i = 1; i < size; i++) {
+      ShapePoint p1 = shapeList.get(i);
+      line(p1.bright, p0.x, p0.y, p1.x, p1.y);
+      p0 = p1;
+    }
+    shapeList.clear();
+  }
 
-    buffer.add(point.clone());
+
+  // Requires implementation of beginShape() type functionality
+  void ellipse(boolean bright, float x, float y, float w, float h) {
+    ellipse(bright, x, y, w, h, 32);
+  }
+
+  void ellipse(boolean bright, float x, float y, float w, float h, int nSides) {
+    beginShape();
+    for (int i = 0; i < nSides; i++) {
+      float a = i / (float) nSides * TAU;
+      vertex(bright, x + cos(a) * w * 0.5, y + sin(a) * h * 0.5);
+    }
+    endShape(CLOSE);
   }
 
   void rect(boolean bright, float x, float y, float w, float h) {
@@ -153,6 +221,10 @@ class VstPoint {
   VstPoint clone() {
     return new VstPoint(x, y, z);
   }
+
+  boolean equals(VstPoint point) {
+    return this.x == point.x && this.y == point.y && this.z == point.z;
+  }
 }
 
 class VstBuffer extends ArrayList<VstPoint> {
@@ -180,7 +252,7 @@ class VstBuffer extends ArrayList<VstPoint> {
       return false;
     } else if (point.z == 0 && size() > 0 && get(size() - 1).z == 0) {
       // If consecutive z values are zero, replace last to avoid transit redundancy
-      // TODO: Maybe this should be done during sorting / cleanup phase?
+      // TODO: Maybe this should be done during sorting / cleanup phase instead of pre-optimizing?
       this.set(size() - 1, point);
     } else {
       super.add(point);
@@ -189,11 +261,7 @@ class VstBuffer extends ArrayList<VstPoint> {
   }
 
   public void send() {
-    if (isEmpty()) {
-      return;
-    }
-
-    if (serial != null) {
+    if (!isEmpty() && serial != null) {
       int byte_count = 0;
 
       // Header
