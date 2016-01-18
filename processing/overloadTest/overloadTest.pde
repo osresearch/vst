@@ -2,7 +2,7 @@ Vst vst;
 
 void settings() {
   size(500, 500, P2D);
-  //pixelDensity(displayDensity());
+  pixelDensity(displayDensity());
 }
 
 void setup() {
@@ -13,7 +13,7 @@ void setup() {
   frameRate(50);
   blendMode(ADD);
   strokeWeight(2);
-  noLoop();
+  //noLoop();
 }
 
 void draw() {
@@ -41,6 +41,18 @@ void draw() {
   stroke(127);
   rect(0, 0, 250, 210);
   popMatrix();
+ 
+  // Shape
+  int nPoints = 24;
+  beginShape();
+  for (int i = 0; i < nPoints; i++) {
+    PVector p = PVector.fromAngle(i / (float) nPoints * TAU);
+    p.mult(i % 2 == 0 ? 50 : 25);
+    p.add(100, 100);
+    stroke(i % 2 == 0 ? 255 : 127);
+    vertex(p);
+  }
+  endShape(CLOSE);
   
   vst.display();
 }
