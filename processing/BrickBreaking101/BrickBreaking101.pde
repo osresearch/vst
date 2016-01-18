@@ -28,9 +28,10 @@ void setup() {
 
 void draw() {
   background(0);
-  vst.line(false, 0, height - 1, 0, 0);
-  vst.line(false, 0, 0, width - 1, 0);
-  vst.line(false, width - 1, 0, width - 1, height - 1);
+  stroke(127);
+  vst.line(0, height - 1, 0, 0);
+  vst.line(0, 0, width - 1, 0);
+  vst.line(width - 1, 0, width - 1, height - 1);
 
   // Update Game Objects
   ball.update();

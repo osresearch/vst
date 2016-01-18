@@ -18,9 +18,10 @@ class Ball extends DisplayableVst {
   }
 
   void display() {
-    pushMatrix();
+    pushStyle();
+    stroke(255);
     rectMode(CENTER);
-    rect(true, position.x, position.y, s, s);
-    popMatrix();
+    rect(position.x, position.y, s, s);
+    popStyle();
   }
 }

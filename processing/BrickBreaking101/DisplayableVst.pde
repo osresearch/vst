@@ -5,7 +5,7 @@ class DisplayableVst extends DisplayableBase {
     this.vst = vst;
   }
 
-  void rect(boolean bright, float x, float y, float w, float h) {
-    vst.rect(bright, x, y, w, h);
+  void rect(float x, float y, float w, float h) {
+    vst.rect(x, y, w, h);
   }
 }

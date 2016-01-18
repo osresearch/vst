@@ -13,9 +13,10 @@ class Paddle extends DisplayableVst {
   }
 
   void display() {
-    pushMatrix();
+    pushStyle();
+    stroke(127);
     rectMode(CENTER);
-    rect(false, position.x, position.y, w, h);
-    popMatrix();
+    rect(position.x, position.y, w, h);
+    popStyle();
   }
 }

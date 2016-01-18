@@ -1,4 +1,4 @@
-class Brick extends DisplayableVst { //<>//
+class Brick extends DisplayableVst { //<>// //<>//
   PVector position;
 
   Brick(Vst vst, PVector position) {
@@ -7,18 +7,20 @@ class Brick extends DisplayableVst { //<>//
   }
 
   void display() {
-    pushMatrix();
+    pushStyle();
+    stroke(127);
     rectMode(CORNER);
-    rect(false, position.x + 1, position.y + 1, brickManager.w - 2, brickManager.h - 2);
-    popMatrix();
+    rect(position.x + 1, position.y + 1, brickManager.w - 2, brickManager.h - 2);
+    popStyle();
   }
 
   void complete() {
     super.complete();
-    pushMatrix();
+    pushStyle();
+    stroke(255);
     rectMode(CORNER);
-    rect(true, position.x, position.y, brickManager.w, brickManager.h);
-    popMatrix();
+    rect(position.x, position.y, brickManager.w, brickManager.h);
+    popStyle();
   }
 }
 
