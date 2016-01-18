@@ -34,7 +34,10 @@ class Firework extends DisplayableBase {
       float r = framesLeft / (float) nFrames;
       PVector p2 = position.copy().sub(velocity.copy().mult(r * sparkSize));
       boolean bright = random(0.75) < r;
-      vst.line(bright, position, p2);
+      pushStyle();
+      stroke(bright ? 255 : 127);
+      vst.line(position, p2);
+      popStyle();
     }
   }
 
