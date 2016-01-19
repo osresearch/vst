@@ -68,6 +68,14 @@ class Vst {
       p0.y = screenY(pt0.x, pt0.y, pt0.z);
       p1.x = screenX(pt1.x, pt1.y, pt1.z);
       p1.y = screenY(pt1.x, pt1.y, pt1.z);
+
+      // Don't display if behind z-plane.
+      // TODO: Doesn't compensate for camera translations
+      float zClip0 = modelZ(pt0.x, pt0.y, pt0.z);
+      float zClip1 = modelZ(pt1.x, pt1.y, pt1.z);
+      if (zClip0 > 0 || zClip1 > 0) {
+       return;
+      }
     }
 
     if (!clip.clip(p0, p1)) {
