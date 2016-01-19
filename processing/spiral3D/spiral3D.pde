@@ -7,17 +7,22 @@ void settings() {
 }
 
 void setup() {
-  vst = new Vst(this, createSerial());
   frameRate(50);
-  pvectors = new ArrayList<PVector>();
-  
-  
+
+  // Init Vst
+  vst = new Vst(this, createSerial());
+  vst.colorBright = color(220, 220, 255);
+  vst.colorNormal = color(vst.colorBright, 96);
+  blendMode(ADD);
+  strokeWeight(1);
+  stroke(255);
+
   // Create List of Points
+  pvectors = new ArrayList<PVector>();
   int resolution = 128;
-  float depth = 800;
+  float radius = 50;  
   float rotations = 6;
-  float radius = 50;
-  
+  float depth = 800;
   for (int i = 0; i < resolution; i++) {
     float n = i / (float) resolution;
     PVector p = PVector.fromAngle(n * TAU * rotations);
@@ -28,8 +33,7 @@ void setup() {
 }
 
 void draw() {
-  background(255);
-  stroke(127);
+  background(0);
 
   // Draw spiral
   pushMatrix();
