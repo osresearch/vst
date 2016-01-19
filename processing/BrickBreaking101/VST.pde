@@ -13,7 +13,7 @@ class Vst {
   private ArrayList<ShapePoint> shapeList;  // For beginShape(), vertex(), endShape, etc..
   private final int shapeNSidesDefault = 32;
   private boolean overload = true;
-  
+
   Vst(PApplet parent) {
     this.parent = parent;
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
@@ -58,10 +58,17 @@ class Vst {
     PVector pt0 = p0.copy();
     PVector pt1 = p1.copy();
 
-    p0.x = modelX(pt0.x, pt0.y, pt0.z);
-    p0.y = modelY(pt0.x, pt0.y, pt0.z);
-    p1.x = modelX(pt1.x, pt1.y, pt1.z);
-    p1.y = modelY(pt1.x, pt1.y, pt1.z);
+    if (g.is2D()) {
+      p0.x = screenX(pt0.x, pt0.y);
+      p0.y = screenY(pt0.x, pt0.y);
+      p1.x = screenX(pt1.x, pt1.y);
+      p1.y = screenY(pt1.x, pt1.y);
+    } else if (g.is3D()) {
+      p0.x = screenX(pt0.x, pt0.y, pt0.z);
+      p0.y = screenY(pt0.x, pt0.y, pt0.z);
+      p1.x = screenX(pt1.x, pt1.y, pt1.z);
+      p1.y = screenY(pt1.x, pt1.y, pt1.z);
+    }
 
     if (!clip.clip(p0, p1)) {
       return;
@@ -155,16 +162,16 @@ class Vst {
     }
     ShapePoint p0 = shapeList.get(0);
     pushStyle();
-      if (mode == CLOSE && size > 2) {
+    if (mode == CLOSE && size > 2) {
       ShapePoint p1 = shapeList.get(size - 1).copy();
       stroke(g.strokeColor);
-      line(p1.x, p1.y, p0.x, p0.y);
+      line(p1.x, p1.y, p1.z, p0.x, p0.y, p0.z);
     }
     for (int i = 1; i < size; i++) {
       ShapePoint p1 = shapeList.get(i);
 
       stroke(p0.c);
-      line(p0.x, p0.y, p1.x, p1.y);
+      line(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z);
 
       p0 = p1;
     }
