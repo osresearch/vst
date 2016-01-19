@@ -39,11 +39,11 @@ void draw() {
   pushMatrix();
   translate(width / 2.0, height / 2.0 + sin(frameCount % 200 / 200.0 * TAU) * 200);
   rotateY((frameCount % 200) / 200.0 * TAU);
-  vst.beginShape();
+  beginShape();
   for (PVector p : pvectors) {
-    vst.vertex(p.x, p.y, p.z);
+    vertex(p.x, p.y, p.z);
   }
-  vst.endShape();  
+  endShape();  
   popMatrix();
 
   // Display();
