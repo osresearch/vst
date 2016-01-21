@@ -1,7 +1,7 @@
 /*
  * Draw a vector line art based on an SVG file.
  */
-class DemoSVG
+class DemoSVG extends DisplayableBase
 {
   PShape s;
   final static float eps = 0.01;
@@ -45,6 +45,8 @@ class DemoSVG
 
     for (int j = 0; j < s.getVertexCount(); j++) {
       PVector p1 = s.getVertex(j);
+      pushStyle();
+      stroke(127);
       if (p0 != null && p1 != null)
       {
         PVector ps0 = PVector.mult(p0, 0.6);
@@ -53,6 +55,7 @@ class DemoSVG
         ps1.add(new PVector(200, 100));
         line(ps0, ps1);
       }
+      popStyle();
 
       if (start == null)
       {
@@ -73,11 +76,13 @@ class DemoSVG
     }
   }
 
-  void draw()
+  void display()
   {
-    background(20);
     //shape(s, 0, 0, 500, 500);
-
+    pushMatrix();
+    //translate(-width / 2.0, 0);
+    scale(0.5);
     draw(s);
+    popMatrix();
   }
 }
