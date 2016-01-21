@@ -3,9 +3,8 @@
  *
  * (c) 2016 Trammell Hudson, Adelle Lin and Jacob Joaquin
  */
-
 Vst vst;
-DemoList demos;
+Demos demos;
 
 void settings() {
   size(450, 550, P2D);  // Vectrex dimensions
@@ -22,11 +21,11 @@ void setup() {
   vst.displayTransit = true;
   blendMode(ADD);
 
-  demos = new DemoList();
-  demos.add(new Demo3D());
+  demos = new Demos();
+  //demos.add(new Demo3D());
   demos.add(new SwarmDemo());
-  demos.add(new QixDemo());
-  demos.add(new SpiralDemo());
+  //demos.add(new QixDemo());
+  //demos.add(new SpiralDemo());
 }
 
 void draw() {

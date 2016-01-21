@@ -1,13 +1,13 @@
-class DemoList extends DisplayableList {
+class Demos extends DisplayableList {
   Displayable current;
   private int currentIndex = 0;
-  int duration = 30;
+  int duration = 1000;
   int framesLeft;
   final static int RANDOM = 0;
-  final static int SEQUENTIAL = 0;
+  final static int SEQUENTIAL = 1;
   private int mode = RANDOM;
 
-  DemoList() {
+  Demos() {
     super();
     framesLeft = duration;
   }

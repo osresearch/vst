@@ -73,7 +73,7 @@ class Particle
   void draw(boolean bright)
   {
     PVector p2 = PVector.sub(p, v);
-    stroke(bright ? 255 : 100);
+    stroke(bright ? 255 : 127);
     line(p, p2);
   }
 };
