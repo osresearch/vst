@@ -18,7 +18,7 @@ void setup() {
   vst.colorBright = color(220, 220, 255);
   vst.colorNormal = color(vst.colorBright, 96);
   vst.colorTransit = color(255, 0, 0, 180);
-  vst.displayTransit = true;
+  //vst.displayTransit = true;
   blendMode(ADD);
 
   demos = new Demos();

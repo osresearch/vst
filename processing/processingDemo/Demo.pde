@@ -21,8 +21,7 @@ class Demos extends DisplayableList {
       current = (Displayable) get(currentIndex);
     }
 
-    framesLeft--;
-    if (framesLeft == 0) {
+    if (framesLeft-- == 0) {
       next();
     }
 
