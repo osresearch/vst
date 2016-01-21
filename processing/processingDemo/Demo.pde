@@ -38,8 +38,12 @@ class Demos extends DisplayableList {
     if (mode == SEQUENTIAL) {
       currentIndex += 1;
       currentIndex %= size();
-    } else {
-      currentIndex = (int) random(size());
+    } else if (size() > 1) {
+      // Ensure new demo is different
+      int lastDemo = currentIndex;
+      while (lastDemo == currentIndex) {
+        currentIndex = (int) random(size());
+      }
     }
     current = (Displayable) get(currentIndex);
   }
