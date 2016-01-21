@@ -72,9 +72,11 @@ class Particle
 
   void draw(boolean bright)
   {
+    pushStyle();
     PVector p2 = PVector.sub(p, v);
     stroke(bright ? 255 : 127);
     line(p, p2);
+    popStyle();
   }
 };
 
@@ -113,7 +115,6 @@ class SwarmDemo extends DisplayableBase
     wasp.draw(true);
 
     // update the bees
-    //strokeWeight(5);
     for (Particle bee : bees)
     {
       bee.bee_move(wasp.p);

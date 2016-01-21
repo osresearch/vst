@@ -196,6 +196,7 @@ class Demo3D extends DisplayableBase
     PVector v6 = c.project(new PVector(+b, +b, -b));
     PVector v7 = c.project(new PVector(+b, +b, +b));
 
+    pushStyle();
     stroke(128);
     line(v0, v1);
     line(v0, v2);
@@ -209,6 +210,7 @@ class Demo3D extends DisplayableBase
     line(v4, v6);
     line(v5, v7);
     line(v6, v7);
+    popStyle();
   }
 
 
@@ -249,8 +251,10 @@ class Demo3D extends DisplayableBase
       if (frame_num == count || frame_num == count + 1)
         bright = true;
 
+      pushStyle();
       stroke(bright ? 255 : 127);
       line(op, np);
+      popStyle();
 
       op = np;
     }

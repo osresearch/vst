@@ -17,11 +17,13 @@ class QixDemo extends DisplayableBase
   int head = 0;
 
   void display() {
-    for (int i = 0; i < segments; i++)
+    pushStyle();
+      for (int i = 0; i < segments; i++)
     {
       stroke(head == i ? 255 : 127);
       line(x0[i], y0[i], x1[i], y1[i]);
     }
+    popStyle();
 
     // update the current point
     final int new_head = (head + 1) % segments;

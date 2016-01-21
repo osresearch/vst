@@ -22,10 +22,10 @@ void setup() {
   blendMode(ADD);
 
   demos = new Demos();
-  //demos.add(new Demo3D());
+  demos.add(new Demo3D());
   demos.add(new SwarmDemo());
-  //demos.add(new QixDemo());
-  //demos.add(new SpiralDemo());
+  demos.add(new QixDemo());
+  demos.add(new SpiralDemo());
 }
 
 void draw() {
