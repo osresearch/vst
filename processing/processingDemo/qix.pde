@@ -2,7 +2,7 @@
  * Qix-like demo of drawing vectors with Processing.
  */
 
-class QixDemo extends Demo
+class QixDemo extends DisplayableBase
 {
 final int segments = 10;
 
@@ -16,10 +16,7 @@ float vx1 = random(20)+4;
 float vy1 = random(20)+4;
 int head = 0;
 
-void draw() {
-  background(0);
-  strokeWeight(5);
-
+void display() {
   for(int i = 0 ; i < segments ; i++)
   {
 	stroke(head == i ? 255 : 128);
