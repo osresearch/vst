@@ -237,7 +237,7 @@ draw()
      if (frame_num == count || frame_num == count + 1)
        bright = true;
 
-     stroke(bright ? 255 : 128);
+     stroke(bright ? 255 : (i * 256.0 / (end - start)) );
      line(op, np);
 
      op = np;
