@@ -47,11 +47,11 @@ class Vst {
     lastY = -1;
   }
 
-  void line(boolean bright, float x0, float y0, float x1, float y1) {
+  void line(float bright, float x0, float y0, float x1, float y1) {
     line(bright, new PVector(x0, y0), new PVector(x1, y1));
   }
 
-  void line(boolean bright, PVector p0, PVector p1) {
+  void line(float bright, PVector p0, PVector p1) {
     if (p0 == null || p1 == null) {
       return;
     }
@@ -70,8 +70,8 @@ class Vst {
 
     p0.x = modelX(pt0.x, pt0.y, pt0.z);
     p0.y = modelY(pt0.x, pt0.y, pt0.z);
-    p1.x = modelX(pt1.x, pt1.y, pt0.z);
-    p1.y = modelY(pt1.x, pt1.y, pt0.z);
+    p1.x = modelX(pt1.x, pt1.y, pt1.z);
+    p1.y = modelY(pt1.x, pt1.y, pt1.z);
     
     if (!clip.clip(p0, p1)) {
       return;
@@ -83,17 +83,17 @@ class Vst {
       return;
     }
 
-    point(1, p0);
-    point(bright ? 3 : 2, p1);
+    point(0, p0);
+    point(bright, p1);
   }
 
   boolean vectorOffscreen(float x, float y) {
     return (x < 0 || x >= width || y < 0 || y >= height);
   }
 
-  void point(int bright, PVector v) {
-    int x = (int) (v.x * 2047 / width);
-    int y = (int) (2047 - (v.y * 2047 / height));
+  void point(float bright, PVector v) {
+    int x = (int) (v.x * 4095 / width);
+    int y = (int) (4095 - (v.y * 4095 / height));
 
     if (x == lastX && y == lastY) {
       return;
@@ -101,10 +101,10 @@ class Vst {
 
     lastX = x;
     lastY = y;
-    buffer.add(x, y, bright);
+    buffer.add(x, y, (int) bright);
   }
 
-  void rect(boolean bright, float x, float y, float w, float h) {
+  void rect(float bright, float x, float y, float w, float h) {
     pushMatrix();
     translate(x, y);    
     // Default is CORNER mode
@@ -129,17 +129,18 @@ class Vst {
       VstFrame f = (VstFrame) iter.next();
       PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
 
-      if (f.z == 1) {
+      if (f.z == 0) {
         // Transit
         if (displayTransit) {
           stroke(colorTransit);        
           parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
         }
-      } else if (f.z == 2) {
+      } else if (f.z < 63) {
         // Normal
-        stroke(colorNormal);        
+        //stroke(colorNormal);        
+	stroke(f.z * 256 / 64);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-      } else if (f.z == 3) {
+      } else if (f.z == 63) {
         // Bright
         stroke(colorBright);        
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
@@ -171,7 +172,7 @@ class VstBuffer extends ArrayList<VstFrame> {
   private final static int LENGTH = 8192;
   private final static int HEADER_LENGTH = 4;
   private final static int TAIL_LENGTH = 3;
-  private final static int MAX_FRAMES = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 3;
+  private final static int MAX_FRAMES = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 4;
   private final byte[] buffer = new byte[LENGTH];
   private Serial serial;
 
@@ -195,6 +196,8 @@ class VstBuffer extends ArrayList<VstFrame> {
 
   public boolean add(int x, int y, int z) {
     int size = size();
+    // scale z from 8 bit to 6 bit
+    z = z * 64 / 256;
     if (size() < LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) {
       // If consecutive z values are zero, replace last to avoid transit redundancy
       if (z == 0 && size > 0 && get(size - 1).z == 0) {
@@ -223,13 +226,15 @@ class VstBuffer extends ArrayList<VstFrame> {
 
       // Data
       for (VstFrame frame : this) {
-        int v = (frame.z & 3) << 22 | (frame.x & 2047) << 11 | (frame.y & 2047) << 0;
+        int v = (2) << 30 | (frame.z & 63) << 24 | (frame.x & 4095) << 12 | (frame.y & 4095) << 0;
+        buffer[byte_count++] = (byte) ((v >> 24) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
         buffer[byte_count++] = (byte) ((v >>  8) & 0xFF);
-        buffer[byte_count++] = (byte) (v & 0xFF);
+        buffer[byte_count++] = (byte) ((v >>  0) & 0xFF);
       }
 
       // Tail
+      buffer[byte_count++] = 1;
       buffer[byte_count++] = 1;
       buffer[byte_count++] = 1;
       buffer[byte_count++] = 1;

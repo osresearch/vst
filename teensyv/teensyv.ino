@@ -8,14 +8,15 @@
  * XY position, the third DAC for brightness and the fourth to generate
  * a 2.5V reference signal for the mid-point.
  *
- * format of commands is 3-bytes per command.
+ * format of commands is 4-bytes per command.
  * 2 bits
- *  00 == number of lines to be sent
+ *  00 == draw lines
  *  01 == "pen up" move to new X,Y
  *  10 == normal line to X,Y
  *  11 == bright line to X,Y
- * 11 bits of X (or number of lines)
- * 11 bits of Y
+ * 6 bits of brightness
+ * 12 bits of X (or number of lines)
+ * 12 bits of Y
  *
  */
 #include <SPI.h>
@@ -30,8 +31,8 @@
 #include "asteroids_font.h"
 #endif
 
-//#define CONFIG_VECTREX
-#define CONFIG_VECTORSCOPE
+#define CONFIG_VECTREX
+//#define CONFIG_VECTORSCOPE
 
 // If you just want a scope clock,
 // solder a 32.768 KHz crystal to the teensy and provide a backup
@@ -39,9 +40,9 @@
 #undef CONFIG_CLOCK
 
 // Sometimes the X and Y need to be flipped and/or swapped
-#undef FLIP_X
+#define FLIP_X
 #undef FLIP_Y
-#undef SWAP_XY
+#define SWAP_XY
 
 // How often should a frame be drawn if we haven't receivded any serial
 // data from MAME (in ms).
@@ -71,7 +72,7 @@
 // most vector scopes don't have brightness control, but set it anyway
 #undef CONFIG_BRIGHTNESS
 #define BRIGHT_OFF	2048	// "0 volts", relative to reference
-#define BRIGHT_NORMAL	3800	// fairly bright
+#define BRIGHT_NORMAL	3800	// lowest visible
 #define BRIGHT_BRIGHT	4095	// super bright
 
 
@@ -123,7 +124,7 @@
 #define MAX_PTS 3000
 static unsigned rx_points;
 static unsigned num_points;
-static uint16_t points[MAX_PTS][2];
+static uint32_t points[MAX_PTS];
 static unsigned do_resync;
 
 #define MOVETO		(1<<11)
@@ -265,35 +266,35 @@ spi_dma_setup()
 
 void
 rx_append(
-	unsigned bright,
 	int x,
-	int y
+	int y,
+	unsigned bright
 )
 {
-	uint16_t * pt = points[rx_points++];
-	pt[0] = x | bright;
-	pt[1] = y;
+	// store the 12-bits of x and y, as well as 6 bits of brightness
+	// (three in X and three in Y)
+	points[rx_points++] = (bright << 24) | x << 12 | y << 0;
 }
 
 
 void
 moveto(int x, int y)
 {
-	rx_append(MOVETO, x, y);
+	rx_append(x, y, 0);
 }
 
 
 void
 lineto(int x, int y)
 {
-	rx_append(LINETO, x, y);
+	rx_append(x, y, 24); // normal brightness
 }
 
 
 void
 brightto(int x, int y)
 {
-	rx_append(BRIGHTTO, x, y);
+	rx_append(x, y, 63); // max brightness
 }
 
 
@@ -311,8 +312,8 @@ draw_character(
 
 	for(int i = 0 ; i < f->count ; i++)
 	{
-		unsigned dx = f->points[2*i+0];
-		unsigned dy = f->points[2*i+1];
+		int dx = f->points[2*i+0];
+		int dy = f->points[2*i+1];
 		if (dx == -1)
 		{
 			next_moveto = 1;
@@ -386,87 +387,94 @@ draw_test_pattern()
 {
 	// fill in some points for test and calibration
 	moveto(0,0);
-	lineto(512,0);
-	lineto(512,512);
-	lineto(0,512);
+	lineto(1024,0);
+	lineto(1024,1024);
+	lineto(0,1024);
 	lineto(0,0);
 
 	// triangle
-	moveto(2047, 0);
-	lineto(2047-128, 0);
-	lineto(2047-0, 128);
-	lineto(2047,0);
+	moveto(4095, 0);
+	lineto(4095-512, 0);
+	lineto(4095-0, 512);
+	lineto(4095,0);
 
 	// cross
-	moveto(2047,2047);
-	lineto(2047-128,2047);
-	lineto(2047-128,2047-128);
-	lineto(2047,2047-128);
-	lineto(2047,2047);
+	moveto(4095,4095);
+	lineto(4095-512,4095);
+	lineto(4095-512,4095-512);
+	lineto(4095,4095-512);
+	lineto(4095,4095);
 
-	moveto(0,2047);
-	lineto(128,2047);
-	lineto(0,2047-128);
-	lineto(128, 2047-128);
-	lineto(0,2047);
+	moveto(0,4095);
+	lineto(512,4095);
+	lineto(0,4095-512);
+	lineto(512, 4095-512);
+	lineto(0,4095);
 
-	moveto(1024,512);
-	brightto(1024,1024+512);
+	moveto(2047,2047-512);
+	brightto(2047,2047+512);
 
-	moveto(512,1024);
-	brightto(1024+512,1024);
+	moveto(2047-512,2047);
+	brightto(2047+512,2047);
+
+	// and a gradiant scale
+	for(int i = 1 ; i < 63 ; i += 4)
+	{
+		moveto(1600, 2048 + i * 8);
+		rx_append(1900, 2048 + i * 8, i); 
+	}
 
 	// draw the sunburst pattern in the corner
 	moveto(0,0);
-	for(unsigned j = 0, i=0 ; j <= 512 ; j += 64, i++)
+	for(unsigned j = 0, i=0 ; j <= 1024 ; j += 128, i++)
 	{
 		if (i & 1)
 		{
-			moveto(512,j);
-			lineto(0,0);
+			moveto(1024,j);
+			rx_append(0,0, i * 7);
 		} else {
-			lineto(512,j);
+			rx_append(1024,j, i * 7);
 		}
 	}
 
 	moveto(0,0);
-	for(unsigned j = 0, i=0 ; j < 512 ; j += 64, i++)
+	for(unsigned j = 0, i=0 ; j < 1024 ; j += 128, i++)
 	{
 		if (i & 1)
 		{
-			moveto(j,512);
-			lineto(0,0);
+			moveto(j,1024);
+			rx_append(0,0, i * 7);
 		} else {
-			lineto(j,512);
+			rx_append(j,1024, i * 7);
 		}
 	}
 
-	draw_string("http://v.st/", 1024 - 450, 1024 + 600, 6);
+	draw_string("http://v.st/", 2048 - 450, 2048 + 600, 6);
 
-	draw_string("Firmware built", 1100, 900, 3);
-	draw_string(__DATE__, 1100, 830, 3);
-	draw_string(__TIME__, 1100, 760, 3);
+	draw_string("Firmware built", 2100, 1900, 3);
+	draw_string(__DATE__, 2100, 1830, 3);
+	draw_string(__TIME__, 2100, 1760, 3);
 
-	int y = 1400;
+	int y = 2400;
 	const int line_size = 70;
 
 	//draw_string("Options:", 1100, y, 3); y -= line_size;
 #ifdef CONFIG_VECTREX
-	draw_string("VECTREX", 1100, y, 3); y -= line_size;
+	draw_string("VECTREX", 2100, y, 3); y -= line_size;
 #else
-	draw_string("Vectorscope", 1100, y, 3); y -= line_size;
+	draw_string("Vectorscope", 2100, y, 3); y -= line_size;
 #endif
 #ifdef FLIP_X
-	draw_string("FLIP_X", 1100, y, 3); y -= line_size;
+	draw_string("FLIP_X", 2100, y, 3); y -= line_size;
 #endif
 #ifdef FLIP_Y
-	draw_string("FLIP_Y", 1100, y, 3); y -= line_size;
+	draw_string("FLIP_Y", 2100, y, 3); y -= line_size;
 #endif
 #ifdef SWAP_XY
-	draw_string("SWAP_XY", 1100, y, 3); y -= line_size;
+	draw_string("SWAP_XY", 2100, y, 3); y -= line_size;
 #endif
 #ifdef FULL_SCALE
-	draw_string("Fullscale", 1100, y, 3); y -= line_size;
+	draw_string("Fullscale", 2100, y, 3); y -= line_size;
 #endif
 
 }
@@ -625,7 +633,16 @@ brightness(
 
 	dwell(OFF_DWELL0);
 	spi_dma_cs = SPI_DMA_CS_BEAM_OFF;
-	mpc4921_write(0, bright);
+
+	// scale bright from OFF to BRIGHT
+	if (bright > 64)
+		bright = 64;
+
+	int bright_scaled = BRIGHT_OFF;
+	if (bright > 0)
+		bright_scaled = BRIGHT_NORMAL + ((BRIGHT_BRIGHT - BRIGHT_NORMAL) * bright) / 64;
+
+	mpc4921_write(0, bright_scaled);
 	spi_dma_cs = SPI_DMA_CS_BEAM_ON;
 #else
 	(void) bright;
@@ -714,21 +731,12 @@ _draw_lineto(
 void
 draw_lineto(
 	int x1,
-	int y1
+	int y1,
+	unsigned bright
 )
 {
-	brightness(BRIGHT_NORMAL);
+	brightness(bright);
 	_draw_lineto(x1, y1, NORMAL_SHIFT);
-}
-
-void
-draw_bright(
-	int x1,
-	int y1
-)
-{
-	brightness(BRIGHT_BRIGHT);
-	_draw_lineto(x1, y1, BRIGHT_SHIFT);
 }
 
 
@@ -739,7 +747,7 @@ draw_moveto(
 	int y1
 )
 {
-	brightness(BRIGHT_OFF);
+	brightness(0);
 
 #ifdef OFF_JUMP
 	goto_x(x1);
@@ -830,7 +838,7 @@ read_data()
 	cmd = (cmd << 8) | c;
 	offset++;
 
-	if (offset != 3)
+	if (offset != 4)
 		return 0;
 
 	// we have a new command
@@ -842,14 +850,15 @@ read_data()
 		return 0;
 	}
 
-	unsigned bright	= (cmd >> 22) & 0x3;
-	unsigned x	= (cmd >> 11) & 0x7FF;
-	unsigned y	= (cmd >> 0) & 0x7FF;
+	unsigned flag   = (cmd >> 30) & 0x3;
+	unsigned bright	= (cmd >> 24) & 0x3F;
+	unsigned x	= (cmd >> 12) & 0xFFF;
+	unsigned y	= (cmd >>  0) & 0xFFF;
 
 	offset = cmd = 0;
 
 	// bright 0, switch buffers
-	if (bright == 0)
+	if (flag == 0)
 	{
 		num_points = rx_points;
 		rx_points = 0;
@@ -862,9 +871,7 @@ read_data()
 		return 1;
 	}
 
-	uint16_t * pt = points[rx_points++];
-	pt[0] = x | (bright << 11);
-	pt[1] = y;
+	rx_append(x, y, bright);
 
 	return 0;
 }
@@ -940,29 +947,24 @@ loop()
 
 	for(unsigned n = 0 ; n < num_points ; n++)
 	{
-		const uint16_t * const pt = points[n];
-		uint16_t x = pt[0];
-		uint16_t y = pt[1];
-		unsigned intensity = (x >> 11) & 0x3;
-#ifdef FULL_SCALE
-		x = (x & 0x7FF) << 1;
-		y = (y & 0x7FF) << 1;
-#else
-		x = ((x & 0x7FF) >> 0) + 1024;
-		y = ((y & 0x7FF) >> 0) + 1024;
+		const uint32_t pt = points[n];
+		uint16_t x = (pt >> 12) & 0xFFF;
+		uint16_t y = (pt >>  0) & 0xFFF;
+		unsigned intensity = (pt  >> 24) & 0x3F;
+
+#ifndef FULL_SCALE
+		x = (x >> 1) + 1024;
+		y = (y >> 1) + 1024;
 #endif
 
-		if (intensity == 1)
+		if (intensity == 0)
 			draw_moveto(x,y);
 		else
-		if (intensity == 2)
-			draw_lineto(x, y);
-		else
-			draw_bright(x, y);
+			draw_lineto(x, y, intensity);
 	}
 
 	// go to the center of the screen, turn the beam off
-	brightness(BRIGHT_OFF);
+	brightness(0);
 
 	goto_x(REST_X);
 	goto_y(REST_Y);

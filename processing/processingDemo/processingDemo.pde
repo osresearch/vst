@@ -69,7 +69,7 @@ void line(float x0, float y0, float x1, float y1)
 	}
 
 	int s = g.strokeColor;
-	boolean bright = red(s) == 255 && green(s) == 255 && blue(s) == 255;
+	float bright = (red(s) + green(s) + blue(s)) / 3;
 	v.line(bright, x0, y0, x1, y1);
 }
 
