@@ -242,7 +242,7 @@ class Vst {
         stroke(colorTransit);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
       } else {                              // Normal
-        stroke(v.z);
+        stroke(colorBright, v.z);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
       }
 
@@ -288,7 +288,7 @@ class VstBuffer extends ArrayList<VstPoint> {
   private final static int LENGTH = 8192;
   private final static int HEADER_LENGTH = 4;
   private final static int TAIL_LENGTH = 3;
-  private final static int MAX_POINTS = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 3;
+  private final static int MAX_POINTS = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 4;
   private final byte[] buffer = new byte[LENGTH];
   private Serial serial;
 
@@ -370,7 +370,8 @@ class VstBuffer extends ArrayList<VstPoint> {
 
       while (i < src.size()) { 
         int j = i;
-        while (j < src.size() - 1 && src.get(j + 1).z > 1) {
+        //while (j < src.size() - 1 && src.get(j + 1).z > 1) {
+        while (j < src.size() - 1 && src.get(j + 1).z > 0) {
           j++;
         }
 
@@ -427,7 +428,7 @@ class VstBuffer extends ArrayList<VstPoint> {
 
   float measureTransitDistance(ArrayList<VstPoint> fList) {
     float distance = 0.0;
-    VstPoint last = new VstPoint(1024, 1024, 0);
+    VstPoint last = new VstPoint(2048, 2048, 0);
     for (VstPoint f : fList) {
       distance += dist(f.x, f.y, last.x, last.y);
       last = f;
