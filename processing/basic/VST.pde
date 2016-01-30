@@ -2,8 +2,7 @@ import java.util.Iterator;
 import processing.serial.*;
 
 class Vst {
-  color colorNormal = color(0, 80);
-  color colorBright = color(0);
+  color colorStroke = color(0);
   color colorTransit = color(255, 0, 0, 80);
   boolean displayTransit = false;
   VstBuffer buffer;
@@ -238,11 +237,11 @@ class Vst {
       VstPoint v = (VstPoint) it.next();
       PVector p = new PVector((float) (v.x / 4095.0) * width, (float) ((4095 - v.y) / 4095.0) * height);
 
-      if (v.z == 0 && displayTransit) {                   // Transit
+      if (v.z == 0 && displayTransit) {
         stroke(colorTransit);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-      } else {                              // Normal
-        stroke(colorBright, v.z);
+      } else {
+        stroke(colorStroke, v.z);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
       }
 
