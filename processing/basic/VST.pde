@@ -1,6 +1,21 @@
 import java.util.Iterator;
 import processing.serial.*;
 
+Serial createSerial() {
+  // finding the right port requires picking it from the list
+  // should look for one that matches "ttyACM*" or "tty.usbmodem*"
+  for (String port : Serial.list()) {
+    println(port);
+    if (match(port, "usbmode|ACM") == null) {
+      continue;
+    }
+    return new Serial(this, port, 9600);
+  }
+
+  println("No valid serial ports found?\n");
+  return null;
+}
+
 class Vst {
   color colorStroke = color(0);
   color colorTransit = color(255, 0, 0, 80);
@@ -88,20 +103,9 @@ class Vst {
     }
 
     point(p0, 0);
-    //int bright = (int) strokeToBrightness(g.strokeColor);    
     int bright = (int) brightness(g.strokeColor);    
     point(p1, bright);
   }
-
-  //private int strokeToBrightness(color c) {
-  //  float bright = brightness(c);
-  //  if (bright >= 1 && bright < 128) {  
-  //    return 2;
-  //  } else if (bright >= 128) {
-  //    return 3;
-  //  }
-  //  return 0;
-  //}
 
   boolean vectorOffscreen(float x, float y) {
     return x < 0 || x >= width || y < 0 || y >= height;
@@ -334,7 +338,8 @@ class VstBuffer extends ArrayList<VstPoint> {
         //buffer[byte_count++] = (byte) (v & 0xFF);
 
         // TODO: Need commands
-        int v = (((int) (point.z / 4)) & 6) << 18 | (point.x & 4095) << 12 | (point.y & 4095) << 0;
+        //int v = (2) << 30 | (frame.z /  & 63) << 24 | (frame.x & 4095) << 12 | (frame.y & 4095) << 0;
+        int v = 2 << 30 | (((int) (point.z / 4)) & 6) << 24 | (point.x & 4095) << 12 | (point.y & 4095) << 0;
         buffer[byte_count++] = (byte) ((v >> 24) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 8) & 0xFF);

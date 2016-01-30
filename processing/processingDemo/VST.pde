@@ -127,7 +127,7 @@ class Vst {
     pushStyle();
     while (iter.hasNext()) {
       VstFrame f = (VstFrame) iter.next();
-      PVector p = new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
+      PVector p = new PVector((float) (f.x / 4097.0) * width, (float) ((4097 - f.y) / 4097.0) * height);
 
       if (f.z == 0) {
         // Transit
