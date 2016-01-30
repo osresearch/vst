@@ -74,7 +74,7 @@ class Vst {
       float zClip0 = modelZ(pt0.x, pt0.y, pt0.z);
       float zClip1 = modelZ(pt1.x, pt1.y, pt1.z);
       if (zClip0 > 0 || zClip1 > 0) {
-       return;
+        return;
       }
     }
 
@@ -88,29 +88,29 @@ class Vst {
       return;
     }
 
-    point(1, p0);
-    float bright = strokeToBrightness(g.strokeColor);    
-    if (bright == 2 || bright == 3) {  
-      point(bright == 2 ? 2 : 3, p1);
-    }
+    point(p0, 0);
+    //int bright = (int) strokeToBrightness(g.strokeColor);    
+    int bright = (int) brightness(g.strokeColor);    
+    point(p1, bright);
   }
 
-  private int strokeToBrightness(color c) {
-    float bright = brightness(c);
-    if (bright >= 1 && bright < 128) {  
-      return 2;
-    } else if (bright >= 128) {
-      return 3;
-    }
-    return 0;
-  }
+  //private int strokeToBrightness(color c) {
+  //  float bright = brightness(c);
+  //  if (bright >= 1 && bright < 128) {  
+  //    return 2;
+  //  } else if (bright >= 128) {
+  //    return 3;
+  //  }
+  //  return 0;
+  //}
 
   boolean vectorOffscreen(float x, float y) {
     return x < 0 || x >= width || y < 0 || y >= height;
   }
 
-  void point(int bright, PVector v) {
-    VstPoint point = new VstPoint((int) (v.x * 2047 / width), (int) (2047 - (v.y * 2047 / height)), bright);
+
+  void point(PVector v, int bright) {
+    VstPoint point = new VstPoint((int) (v.x * 4095 / width), (int) (4095 - (v.y * 4095 / height)), bright);
 
     if (!point.equals(lastPoint)) {
       buffer.add(point.clone());
@@ -236,16 +236,13 @@ class Vst {
     overload = false;
     while (it.hasNext()) {
       VstPoint v = (VstPoint) it.next();
-      PVector p = new PVector((float) (v.x / 2047.0) * width, (float) ((2047 - v.y) / 2047.0) * height);
+      PVector p = new PVector((float) (v.x / 4095.0) * width, (float) ((4095 - v.y) / 4095.0) * height);
 
-      if (v.z == 1 && displayTransit) {                   // Transit
+      if (v.z == 0 && displayTransit) {                   // Transit
         stroke(colorTransit);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-      } else if (v.z == 2) {                              // Normal
-        stroke(colorNormal);
-        parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
-      } else if (v.z == 3) {                              // Bright
-        stroke(colorBright);
+      } else {                              // Normal
+        stroke(v.z);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
       }
 
@@ -257,7 +254,7 @@ class Vst {
   }
 
   PVector vstToScreen(VstPoint f) {
-    return new PVector((float) (f.x / 2047.0) * width, (float) ((2047 - f.y) / 2047.0) * height);
+    return new PVector((float) (f.x / 4095.0) * width, (float) ((4095 - f.y) / 4095.0) * height);
   }
 }
 
@@ -332,7 +329,14 @@ class VstBuffer extends ArrayList<VstPoint> {
 
       // Data
       for (VstPoint point : this) {
-        int v = (point.z & 3) << 22 | (point.x & 2047) << 11 | (point.y & 2047) << 0;
+        //int v = (point.z & 3) << 22 | (point.x & 2047) << 11 | (point.y & 2047) << 0;
+        //buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
+        //buffer[byte_count++] = (byte) ((v >> 8) & 0xFF);
+        //buffer[byte_count++] = (byte) (v & 0xFF);
+
+        // TODO: Need commands
+        int v = (((int) (point.z / 4)) & 6) << 18 | (point.x & 4095) << 12 | (point.y & 4095) << 0;
+        buffer[byte_count++] = (byte) ((v >> 24) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 8) & 0xFF);
         buffer[byte_count++] = (byte) (v & 0xFF);
@@ -354,7 +358,7 @@ class VstBuffer extends ArrayList<VstPoint> {
     VstBuffer destination = new VstBuffer();      
     VstBuffer src = (VstBuffer) clone();
 
-    VstPoint lastPoint = new VstPoint(1024, 1024, 0);
+    VstPoint lastPoint = new VstPoint(2048, 2048, 0);
     VstPoint nearestPoint = lastPoint;
 
     while (!src.isEmpty()) {
