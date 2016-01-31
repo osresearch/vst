@@ -1,13 +1,17 @@
 void line(float x0, float y0, float x1, float y1) {
   if (vst.overload) {
-    vst.line(new PVector(x0, y0), new PVector(x1, y1));
+    vst.line(x0, y0, x1, y1);
   } else {
     super.line(x0, y0, x1, y1);
   }
 }
 
 void line(PVector p0, PVector p1) {
+  if (vst.overload) {
     vst.line(p0, p1);
+  } else {
+    super.line(p0.x, p0.y, p1.x, p1.y);
+  }
 }
 
 void ellipse(float x, float y, float w, float h) {
