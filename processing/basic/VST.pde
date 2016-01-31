@@ -332,12 +332,6 @@ class VstBuffer extends ArrayList<VstPoint> {
 
       // Data
       for (VstPoint point : this) {
-        //int v = (point.z & 3) << 22 | (point.x & 2047) << 11 | (point.y & 2047) << 0;
-        //buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
-        //buffer[byte_count++] = (byte) ((v >> 8) & 0xFF);
-        //buffer[byte_count++] = (byte) (v & 0xFF);
-
-        // TODO: Need commands
         //int v = (2) << 30 | (frame.z /  & 63) << 24 | (frame.x & 4095) << 12 | (frame.y & 4095) << 0;
         int v = 2 << 30 | (((int) (point.z / 4)) & 6) << 24 | (point.x & 4095) << 12 | (point.y & 4095) << 0;
         buffer[byte_count++] = (byte) ((v >> 24) & 0xFF);
