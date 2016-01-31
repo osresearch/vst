@@ -14,8 +14,7 @@ void setup() {
 
   // Init Vst
   vst = new Vst(this, createSerial());
-  vst.colorBright = color(220, 220, 255);
-  vst.colorNormal = color(vst.colorBright, 96);
+  vst.colorStroke = color(220, 220, 255);
   blendMode(ADD);
   strokeWeight(1);
 

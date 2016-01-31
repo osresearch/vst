@@ -9,8 +9,7 @@ void settings() {
 
 void setup() {
   vst = new Vst(this, createSerial());
-  vst.colorBright = color(64, 255, 64);
-  vst.colorNormal = color(vst.colorBright, 80);
+  vst.colorStroke = color(64, 255, 64);
   //vst.displayTransit = true;
   gravity = new PVector(0, 0.01);
   fireworkManager = new FireworkManager();
