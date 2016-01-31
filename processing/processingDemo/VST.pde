@@ -290,7 +290,7 @@ class VstPoint {
 class VstBuffer extends ArrayList<VstPoint> {
   private final static int LENGTH = 8192;
   private final static int HEADER_LENGTH = 4;
-  private final static int TAIL_LENGTH = 3;
+  private final static int TAIL_LENGTH = 4;
   private final static int MAX_POINTS = (LENGTH - HEADER_LENGTH - TAIL_LENGTH - 1) / 4;
   private final byte[] buffer = new byte[LENGTH];
   private Serial serial;
@@ -332,8 +332,7 @@ class VstBuffer extends ArrayList<VstPoint> {
 
       // Data
       for (VstPoint point : this) {
-        //int v = (2) << 30 | (frame.z /  & 63) << 24 | (frame.x & 4095) << 12 | (frame.y & 4095) << 0;
-        int v = 2 << 30 | (((int) (point.z / 4)) & 6) << 24 | (point.x & 4095) << 12 | (point.y & 4095) << 0;
+        int v = 2 << 30 | (((int) (point.z / 4)) & 63) << 24 | (point.x & 4095) << 12 | (point.y & 4095) << 0;
         buffer[byte_count++] = (byte) ((v >> 24) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 16) & 0xFF);
         buffer[byte_count++] = (byte) ((v >> 8) & 0xFF);
@@ -341,6 +340,7 @@ class VstBuffer extends ArrayList<VstPoint> {
       }
 
       // Tail
+      buffer[byte_count++] = 1;
       buffer[byte_count++] = 1;
       buffer[byte_count++] = 1;
       buffer[byte_count++] = 1;
