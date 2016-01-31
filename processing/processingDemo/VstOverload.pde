@@ -30,6 +30,10 @@ void rect(float x, float y, float w, float h) {
   vst.rect(x, y, w, h);
 }
 
+void rect(PVector p, float w, float h) {
+  vst.rect(p.x, p.y, w, h);
+}
+
 void beginShape() {
   vst.beginShape();
 }
