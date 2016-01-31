@@ -7,7 +7,7 @@ void settings() {
 
 void setup() {
   vst = new Vst(this, createSerial());
-  vst.displayTransit = true;
+  //vst.displayTransit = true;
   frameRate(25);
 }
 
@@ -47,6 +47,22 @@ void draw() {
     vertex(p);
   }
   endShape(CLOSE);
+
+  // Triangle
+  pushMatrix();
+  translate(400, 100);
+  scale(0.25);
+  triangle(0, -100, 100, 50, -100, 50);
+  //triangle(new PVector(0, -100), new PVector(100, 50), new PVector(-100, 50));
+  popMatrix();
+
+  // Quad
+  pushMatrix();
+  translate(400, 400);
+  scale(0.25);
+  quad(0, 100, 100, 0, 0, -100, -100, 0);
+  //quad(new PVector(0, 100), new PVector(100, 0), new PVector(0, -100), new PVector(-100, 0));
+  popMatrix();
 
   //// Interactivity with mouse
   stroke(255);
