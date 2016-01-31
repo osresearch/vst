@@ -61,6 +61,31 @@ void endShape(int mode) {
   vst.endShape(mode);
 }
 
+void triangle(float x0, float y0, float x1, float y1, float x2, float y2) {
+  triangle(new PVector(x0, y0), new PVector(x1, y1), new PVector(x2, y2));
+}
+
+void triangle(PVector p0, PVector p1, PVector p2) {
+  vst.beginShape();
+  vst.vertex(p0);
+  vst.vertex(p1);
+  vst.vertex(p2);
+  vst.endShape(CLOSE);
+}
+
+void quad(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
+  quad(new PVector(x0, y0), new PVector(x1, y1), new PVector(x2, y2), new PVector(x3, y3));
+}
+
+void quad(PVector p0, PVector p1, PVector p2, PVector p3) {
+  vst.beginShape();
+  vst.vertex(p0);
+  vst.vertex(p1);
+  vst.vertex(p2);
+  vst.vertex(p3);
+  vst.endShape(CLOSE);
+}
+
 Serial createSerial() {
   // finding the right port requires picking it from the list
   // should look for one that matches "ttyACM*" or "tty.usbmodem*"
