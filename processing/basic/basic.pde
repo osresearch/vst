@@ -6,10 +6,9 @@ void settings() {
 }
 
 void setup() {
-  //vst = new Vst(this, createSerial());
-  vst = new Vst(this);
+  vst = new Vst(this, createSerial());
   vst.displayTransit = true;
-  frameRate(50);
+  frameRate(25);
 }
 
 void draw() {

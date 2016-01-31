@@ -9,7 +9,7 @@ void settings() {
   pixelDensity(displayDensity());
 }
 
-void setup() {  
+void setup() {
   frameRate(50);
 
   // Init Vst
