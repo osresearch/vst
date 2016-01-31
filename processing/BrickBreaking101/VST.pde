@@ -109,6 +109,7 @@ class Vst {
   private PApplet parent;
   private Clipping clip;
   private VstPoint lastPoint;
+  private PVector lastInsert;
   private ArrayList<ShapePoint> shapeList;  // For beginShape(), vertex(), endShape, etc..
   private final int shapeNSidesDefault = 32;
   private boolean overload = true;
@@ -118,6 +119,7 @@ class Vst {
     clip = new Clipping(new PVector(0, 0), new PVector(width - 1, height - 1));
     buffer = new VstBuffer();
     lastPoint = new VstPoint(-1, -1);
+    lastInsert = new PVector();
   }
 
   Vst(PApplet parent, Serial serial) {
@@ -129,7 +131,8 @@ class Vst {
     buffer.update();
     displayBuffer();
     buffer.send();
-    lastPoint = new VstPoint(-1, -1); // TODO: Better choice for resetting lastPoint?
+    lastPoint = new VstPoint(-1, -1);        // TODO: Better choice for resetting lastPoint?
+    lastInsert = new PVector();
   }
 
   void line(float x0, float y0, float x1, float y1) {
@@ -187,7 +190,12 @@ class Vst {
       return;
     }
 
-    point(p0, 0);
+
+    // Handle transit
+    if (!lastInsert.equals(p0)) {
+      point(p0, 0);
+    }
+
     int bright = (int) brightness(g.strokeColor);    
     point(p1, bright);
   }
@@ -203,6 +211,7 @@ class Vst {
     if (!point.equals(lastPoint)) {
       buffer.add(point.clone());
     }
+    lastInsert = v;
   }
 
   class ShapePoint {
@@ -329,6 +338,8 @@ class Vst {
       if (v.z == 0 && displayTransit) {
         stroke(colorTransit);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
+        parent.line(p.x - 3, p.y - 3, p.x + 3, p.y + 3);
+        parent.line(p.x + 3, p.y - 3, p.x - 3, p.y + 3);
       } else {
         stroke(colorStroke, v.z);
         parent.line(lastPoint.x, lastPoint.y, p.x, p.y);
@@ -453,7 +464,6 @@ class VstBuffer extends ArrayList<VstPoint> {
 
       while (i < src.size()) { 
         int j = i;
-        //while (j < src.size() - 1 && src.get(j + 1).z > 1) {
         while (j < src.size() - 1 && src.get(j + 1).z > 0) {
           j++;
         }

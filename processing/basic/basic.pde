@@ -7,7 +7,7 @@ void settings() {
 
 void setup() {
   vst = new Vst(this, createSerial());
-  //vst.displayTransit = true;
+  vst.displayTransit = true;
   frameRate(25);
 }
 
