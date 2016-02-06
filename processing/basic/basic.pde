@@ -12,7 +12,7 @@ void setup() {
 }
 
 void draw() {
-  background(255);
+  background(0);
 
   stroke(255);
   line(0, 0, width - 1, height - 1);
@@ -65,9 +65,11 @@ void draw() {
   popMatrix();
 
   //// Interactivity with mouse
+  pushStyle();
   stroke(255);
   rectMode(CENTER);  
   rect(mouseX, mouseY, 20, 20);
+  popStyle();
 
   // Display();
   vst.display();

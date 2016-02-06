@@ -132,7 +132,8 @@ class Vst {
     displayBuffer();
     buffer.send();
     lastPoint = new VstPoint(-1, -1);        // TODO: Better choice for resetting lastPoint?
-    lastInsert = new PVector();
+    lastInsert = new PVector(width / 2, height / 2);
+    point(lastInsert, 0);
   }
 
   void line(float x0, float y0, float x1, float y1) {
