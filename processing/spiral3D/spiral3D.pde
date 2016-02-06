@@ -15,9 +15,7 @@ void setup() {
 
   // Init Vst
   vst = new Vst(this, createSerial());
-  vst.colorStroke = color(220, 220, 255);
   blendMode(ADD);
-  strokeWeight(1);
   stroke(255);
 
   // Create List of Points

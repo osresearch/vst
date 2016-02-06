@@ -14,8 +14,7 @@ void settings() {
 void setup() {
   frameRate(25);
   vst = new Vst(this, createSerial());
-  vst.colorStroke = color(255);
-  vst.colorTransit = color(255, 0, 0, 180);
+  //vst.displayTransit = true;
   blendMode(ADD);
 
   demos = new Demos();

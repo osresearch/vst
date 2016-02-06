@@ -102,7 +102,7 @@ Serial createSerial() {
 }
 
 class Vst {
-  color colorStroke = color(0);
+  color colorStroke = color(255);
   color colorTransit = color(255, 0, 0, 80);
   boolean displayTransit = false;
   VstBuffer buffer;
