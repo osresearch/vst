@@ -31,8 +31,9 @@
 #include "asteroids_font.h"
 #endif
 
-#define CONFIG_VECTREX
+//#define CONFIG_VECTREX
 //#define CONFIG_VECTORSCOPE
+#define CONFIG_LBO51MA
 
 // If you just want a scope clock,
 // solder a 32.768 KHz crystal to the teensy and provide a backup
@@ -106,6 +107,35 @@
 #define BRIGHT_BRIGHT	4095	// super bright
 
 #define FULL_SCALE		// use the full -2.5 to 2.5V range
+
+#elif defined(CONFIG_LBO51MA)
+/** LBO-51MA vector monitor configuration.
+ *
+ * Vref is through a 220 / 100 Ohm voltage divider to keep the outside
+ * range to 1.5 V.
+ */
+
+#define BRIGHT_SHIFT	1	// larger numbers == dimmer lines
+#define NORMAL_SHIFT	2	// but we can control with Z axis
+#define OFF_JUMP		// this is a fast display
+
+#define OFF_DWELL0	0	// time to sit beam on before starting a transit
+
+#define REST_X		4095	// wait in the upper right corner of the screen
+#define REST_Y		4095
+
+#define CONFIG_BRIGHTNESS	// use the brightness DAC
+#define BRIGHT_OFF	0	// "0 volts", relative to reference
+#define BRIGHT_NORMAL	2048	// fairly bright
+#define BRIGHT_BRIGHT	4095	// super bright
+
+// force these values to not be flipped, since they will
+// go off-scale high if they are
+#undef FLIP_X
+#undef FLIP_Y
+#undef SWAP_XY
+
+#define FULL_SCALE		// full range since we have a voltage divider
 
 #else
 #error "One of CONFIG_VECTORSCOPE or CONFIG_VECTREX must be defined"
@@ -461,8 +491,12 @@ draw_test_pattern()
 	//draw_string("Options:", 1100, y, 3); y -= line_size;
 #ifdef CONFIG_VECTREX
 	draw_string("VECTREX", 2100, y, 3); y -= line_size;
-#else
+#elif defined(CONFIG_LBO51MA)
+	draw_string("LBO51MA", 2100, y, 3); y -= line_size;
+#elif defined(CONFIG_VECTORSCOPE)
 	draw_string("Vectorscope", 2100, y, 3); y -= line_size;
+#else
+	draw_string("Unknown display", 2100, y, 3); y -= line_size;
 #endif
 #ifdef FLIP_X
 	draw_string("FLIP_X", 2100, y, 3); y -= line_size;
