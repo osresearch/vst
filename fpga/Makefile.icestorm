@@ -72,7 +72,7 @@ endef
 test: $(TEST-y)
 $(foreach t,$(TEST-y),$(eval $(call make-test,$t)))
 %.vvp:
-	iverilog -o $@ -s $(basename $@) $^
+	iverilog -DIVERILOG -o $@ -s $(basename $@) $^
 
 clean:
 	$(RM) *.blif *.asc *.bin *.json .*.d
