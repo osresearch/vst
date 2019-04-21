@@ -1,3 +1,11 @@
+`ifndef _lineto_v_
+`define _lineto_v_
+
+/**
+ * Bresenham's Line Drawing algorithm.
+ * Generate straight lines from the current point to the
+ * destination.  x_in/y_in can be reset at any time with the strobe.
+ */
 module lineto(
 	input clk,
 	input reset,
@@ -6,7 +14,8 @@ module lineto(
 	input [BITS-1:0] x_in,
 	input [BITS-1:0] y_in,
 
-	output ready,
+	output ready, // set when done
+	output axis, // did the x or y value change
 	output [BITS-1:0] x_out,
 	output [BITS-1:0] y_out
 );
@@ -24,6 +33,7 @@ module lineto(
 	// for a new point.
 	assign ready = (x_dst == x_out) && (y_dst == y_out);
 
+	reg axis;
 	reg sx;
 	reg sy;
 
@@ -42,10 +52,12 @@ module lineto(
 			x_out <= x_in;
 			y_out <= y_in;
 			err <= 0;
+			axis <= 0;
 		end else
 		if (strobe) begin
 			x_dst <= x_in;
 			y_dst <= y_in;
+			axis <= 0;
 
 			if (x_in > x_out) begin
 				sx <= 1;
@@ -74,11 +86,13 @@ module lineto(
 			begin
 				err <= err - dy;
 				x_out <= x_out + (sx ? 1 : -1);
+				axis <= 0;
 			end else
 			if (err2 < dx)
 			begin
 				err <= err + dx;
 				y_out <= y_out + (sy ? 1 : -1);
+				axis <= 1;
 			end
 		end
 	end
@@ -139,4 +153,6 @@ module lineto_test;
 	initial $monitor("%d %d %d %d", $time, x_out, y_out, ready);
 
 endmodule
+`endif
+
 `endif

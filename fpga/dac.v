@@ -1,4 +1,5 @@
 `include "mpc4922.v"
+`include "lineto.v"
 
 module top(
 	output led_r,
@@ -11,11 +12,29 @@ module top(
 	wire clk_48mhz, clk = clk_48mhz;
 	SB_HFOSC osc(1,1,clk_48mhz);
 
-	reg [11:0] value_x;
-	reg [11:0] value_y;
-	reg axis;
+	reg [11:0] lineto_x;
+	reg [11:0] lineto_y;
+	reg lineto_strobe;
+
+	wire lineto_ready;
+	wire axis;
+	wire [11:0] value_x;
+	wire [11:0] value_y;
 	reg dac_strobe;
 	wire dac_ready;
+
+	lineto #(.BITS(12)) drawer(
+		.clk(clk),
+		.reset(reset),
+		.strobe(lineto_strobe),
+		.x_in(lineto_x),
+		.y_in(lineto_y),
+
+		.ready(lineto_ready),
+		.x_out(value_x),
+		.y_out(value_y),
+		.axis(axis)
+	);
 
 	mpc4922 dac(
 		.clk(clk),
@@ -39,19 +58,20 @@ module top(
 	always @(posedge clk)
 	begin
 		dac_strobe <= 0;
+		lineto_strobe <= 0;
 
 		if (!dac_ready || dac_strobe)
 		begin
 			// do nothing
 		end else //if (counter == 0)
 		begin
-			if (axis)
-				value_x <= value_x - 3;
-			else
-				value_y <= value_y + 7;
-
 			dac_strobe <= 1;
-			axis <= !axis;
+			lineto_x <= lineto_x + 3;
+			lineto_y <= lineto_y + 2;
+
 		end
+
+		if (lineto_ready)
+			lineto_strobe <= 1;
 	end
 endmodule
