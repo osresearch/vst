@@ -1,1 +1,5 @@
 .*.swp
+.*.d
+*.asc
+*.bin
+*.json
