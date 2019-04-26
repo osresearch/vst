@@ -9,8 +9,7 @@ void settings() {
 
 void setup() {
   vst = new Vst(this, createSerial());
-  vst.colorBright = color(64, 255, 64);
-  vst.colorNormal = color(vst.colorBright, 80);
+  vst.colorStroke = color(64, 255, 64);
   //vst.displayTransit = true;
   gravity = new PVector(0, 0.01);
   fireworkManager = new FireworkManager();
@@ -22,7 +21,7 @@ void setup() {
 
 void draw() {
   background(0, 24, 0);
-  if (random(1.0) < 0.05) {
+  if (random(1.0) < 0.0125) {
     fireworkManager.trigger(new PVector(random(width), random(height)), (int) random(50, 200));
   }
   fireworkManager.update();
