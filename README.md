@@ -12,6 +12,9 @@ with new art projects.
 
 More details at https://trmm.net/V.st and https://trmm.net/MAME
 
+## Building the Board
+A full Bill of Materials can be found [here](BOM.md).
+
 ## Flashing the Firmware
 To flash the firmware, make sure you have [Teensyduino](https://www.pjrc.com/teensy/td_download.html) installed.
 
