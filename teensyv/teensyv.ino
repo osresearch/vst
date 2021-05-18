@@ -32,8 +32,9 @@
 #endif
 
 //#define CONFIG_VECTREX
-//#define CONFIG_VECTORSCOPE
-#define CONFIG_LBO51MA
+#define CONFIG_VECTORSCOPE
+//#define CONFIG_LBO51MA
+//#define CONFIG_TUBE
 
 // If you just want a scope clock,
 // solder a 32.768 KHz crystal to the teensy and provide a backup
@@ -76,6 +77,30 @@
 #define BRIGHT_NORMAL	3800	// lowest visible
 #define BRIGHT_BRIGHT	4095	// super bright
 
+#elif defined(CONFIG_TUBE)
+/** Vacuum tube based scope from 1960 (Analab Type 1100)
+ * The beam is slow, but we do have a brightness input, which lets us hide our connecting lines.
+ * Brightness requires additional circuitry, as somewhere between 5 and 50V 
+ * is required to blank this scope and the DAC can only output ~2.5V.
+ */
+#define BRIGHT_SHIFT  0 // larger numbers == dimmer lines
+#define NORMAL_SHIFT  1 // no z-axis, so we must have a difference
+#undef OFF_JUMP      // too slow, so we can't jump the beam
+#define REST_X    0 // wait off screen
+#define REST_Y    0
+
+#define FULL_SCALE // use full -2.5 to +2.5 V range
+
+#define OFF_SHIFT  1 // smaller numbers == slower transits
+#define OFF_DWELL0  50  // time to sit beam on before starting a transit
+#define OFF_DWELL1  50 // time to sit before starting a transit
+#define OFF_DWELL2  50  // time to sit after finishing a transit
+
+// highest output voltage is used to blank the screen, and it won't blank below threshold
+#define CONFIG_BRIGHTNESS
+#define BRIGHT_OFF  4095  // maximum output voltage to blank
+#define BRIGHT_NORMAL 0  // no blanking
+#define BRIGHT_BRIGHT 0  // no blanking
 
 #elif defined(CONFIG_VECTREX)
 /** Vectrex configuration.
@@ -493,6 +518,8 @@ draw_test_pattern()
 	draw_string("VECTREX", 2100, y, 3); y -= line_size;
 #elif defined(CONFIG_LBO51MA)
 	draw_string("LBO51MA", 2100, y, 3); y -= line_size;
+#elif defined(CONFIG_TUBE)
+	draw_string("Analab 1100", 2100, y, 3); y-= line_size;
 #elif defined(CONFIG_VECTORSCOPE)
 	draw_string("Vectorscope", 2100, y, 3); y -= line_size;
 #else
@@ -513,7 +540,6 @@ draw_test_pattern()
 
 }
 
-
 static time_t
 teensy3_rtc()
 {
@@ -526,9 +552,11 @@ void
 setup()
 {
 	// set the Time library to use Teensy 3.0's RTC to keep time
-	setSyncProvider(teensy3_rtc);
+	//setSyncProvider(teensy3_rtc);
 
 	Serial.begin(9600);
+	delay(500);
+	Serial.println("Initiating setup");
 	pinMode(DELAY_PIN, OUTPUT);
 	pinMode(DEBUG_PIN, OUTPUT);
 	pinMode(IO_PIN, OUTPUT);
@@ -546,6 +574,7 @@ setup()
 
 	rx_points = 0;
 
+	Serial.println("Prepping test pattern");
 	draw_test_pattern();
 	num_points = rx_points;
 	rx_points = 0;
@@ -563,6 +592,14 @@ setup()
 	//DMASPI0.start();
 	spi_dma_setup();
 #endif
+
+  //LED to indicate that test pattern has been drawn
+  pinMode(21, OUTPUT);
+  pinMode(22, OUTPUT);
+  pinMode(23, OUTPUT);
+  digitalWrite(23, 1);
+  digitalWrite(21, 0);
+  Serial.println("setup() complete; proceeding to main loop");
 }
 
 
@@ -914,10 +951,6 @@ read_data()
 void
 loop()
 {
-	//Serial.print(fb);
-	//Serial.print(' ');
-	//Serial.print(num_points);
-	//Serial.println();
 
 	static uint32_t frame_micros;
 	uint32_t now;
@@ -937,8 +970,12 @@ loop()
 		}
 
 		// start redraw when read_data is done
-		if (Serial.available() && read_data() == 1)
+		if (Serial.available() && read_data() == 1) {
+			// switch light to indicate mode
+      			digitalWrite(21, 1);
+			digitalWrite(23, 0);
 			break;
+		}
 	}
 
 	frame_micros = now;
@@ -1006,4 +1043,3 @@ loop()
 	// the USB loop above will flush eventually
 	digitalWriteFast(DEBUG_PIN, 0);
 }
-
