@@ -1,4 +1,5 @@
 ![Starwars game emulated with MAME](https://49.media.tumblr.com/e4f2586dd94cd36beee271fd90e8a9cc/tumblr_nxgs3gqcMc1s6w6q7o1_500.gif)
+
 v.st vector board
 ====
 
@@ -11,6 +12,9 @@ with new art projects.
 ![v.st vector board prototype](https://farm6.static.flickr.com/5655/22411224411_085dc4af84.jpg)
 
 More details at https://trmm.net/V.st and https://trmm.net/MAME
+
+## Building the Board
+A full Bill of Materials can be found [here](BOM.md).
 
 ## Flashing the Firmware
 To flash the firmware, make sure you have [Teensyduino](https://www.pjrc.com/teensy/td_download.html) installed.
